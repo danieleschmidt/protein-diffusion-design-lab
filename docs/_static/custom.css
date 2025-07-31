@@ -1,0 +1,123 @@
+/* Custom CSS for Protein Diffusion Design Lab documentation */
+
+/* Custom color scheme for protein/ML theme */
+:root {
+    --primary-color: #2E8B57;  /* Sea green for bio theme */
+    --secondary-color: #4682B4; /* Steel blue for ML theme */
+    --accent-color: #FF6347;   /* Tomato for highlights */
+    --text-color: #2F4F4F;     /* Dark slate gray */
+    --bg-color: #FAFAFA;       /* Light gray background */
+}
+
+/* Header customization */
+.wy-nav-top {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Sidebar styling */
+.wy-nav-side {
+    background: var(--bg-color);
+}
+
+.wy-menu-vertical li.current a {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.wy-menu-vertical li.current > a:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Code blocks */
+.highlight {
+    background: #f8f8f8;
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1em;
+}
+
+/* Admonitions */
+.admonition.note {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.admonition.warning {
+    border-left: 4px solid var(--accent-color);
+}
+
+/* Links */
+a {
+    color: var(--secondary-color);
+}
+
+a:hover {
+    color: var(--primary-color);
+}
+
+/* Table styling */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
+/* API documentation specific styling */
+.py.class > dt {
+    background-color: rgba(46, 139, 87, 0.1);
+}
+
+.py.method > dt {
+    background-color: rgba(70, 130, 180, 0.1);
+}
+
+/* Custom header for ML/Bio content */
+.protein-header {
+    background: linear-gradient(90deg, 
+        var(--primary-color) 0%, 
+        var(--secondary-color) 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* GPU/CUDA specific styling */
+.gpu-requirement {
+    background: linear-gradient(45deg, #76B900, #00D2FF);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* Performance metrics styling */
+.metrics-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+}
+
+.metrics-table th,
+.metrics-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.metrics-table th {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.metrics-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+    .wy-nav-content {
+        margin-left: 0;
+    }
+    
+    .wy-nav-side {
+        left: -300px;
+    }
+}
