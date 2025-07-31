@@ -1,0 +1,146 @@
+# Docker Compose configuration for protein-diffusion-design-lab
+
+version: '3.8'
+
+services:
+
+  # Main application service
+  protein-diffusion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: protein-diffusion-app
+    ports:
+      - "8501:8501"  # Streamlit web interface
+    volumes:
+      - ./data:/app/data:ro              # Read-only data mount
+      - ./weights:/app/weights:ro        # Read-only model weights
+      - ./outputs:/app/outputs           # Output directory
+      - ./logs:/app/logs                 # Log directory
+    environment:
+      - PROTEIN_DIFFUSION_ENV=production
+      - PROTEIN_DIFFUSION_LOG_LEVEL=INFO
+      - PROTEIN_DIFFUSION_CACHE_DIR=/app/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Development service
+  protein-diffusion-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: protein-diffusion-dev
+    ports:
+      - "8501:8501"  # Streamlit
+      - "8888:8888"  # Jupyter
+      - "6006:6006"  # TensorBoard
+    volumes:
+      - .:/app                           # Full source mount for development
+      - ~/.gitconfig:/home/protein/.gitconfig:ro
+      - ~/.ssh:/home/protein/.ssh:ro
+    environment:
+      - PROTEIN_DIFFUSION_ENV=development
+      - PROTEIN_DIFFUSION_LOG_LEVEL=DEBUG
+      - JUPYTER_ENABLE_LAB=yes
+    stdin_open: true
+    tty: true
+    profiles:
+      - dev
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Redis cache service (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: protein-diffusion-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - cache
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: protein-diffusion-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    profiles:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: protein-diffusion-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    profiles:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  default:
+    name: protein-diffusion-network

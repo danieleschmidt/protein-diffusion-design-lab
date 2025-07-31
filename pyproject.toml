@@ -102,7 +102,11 @@ testpaths = [
 markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
-    "gpu: marks tests that require GPU",
+    "gpu: marks tests that require GPU", 
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance benchmarks",
+    "e2e: marks tests as end-to-end tests",
+    "contract: marks tests as API contract tests",
 ]
 
 [tool.coverage.run]

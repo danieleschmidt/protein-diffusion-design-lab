@@ -1,0 +1,75 @@
+Contact: security@terragonlabs.io
+Preferred-Languages: en
+Canonical: https://github.com/yourusername/protein-diffusion-design-lab/security
+Policy: https://github.com/yourusername/protein-diffusion-design-lab/blob/main/SECURITY.md
+Acknowledgments: https://github.com/yourusername/protein-diffusion-design-lab/blob/main/SECURITY.md#acknowledgments
+
+# Security Policy for Protein Diffusion Design Lab
+
+## Supported Versions
+
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
+
+## Reporting Security Vulnerabilities
+
+We take security vulnerabilities seriously. Please do NOT report security 
+vulnerabilities through public GitHub issues.
+
+Instead, please report them via:
+- Email: security@terragonlabs.io
+- Security advisory: https://github.com/yourusername/protein-diffusion-design-lab/security/advisories/new
+
+Include as much information as possible:
+- Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
+- Full paths of source file(s) related to the manifestation of the issue
+- The location of the affected source code (tag/branch/commit or direct URL)
+- Any special configuration required to reproduce the issue
+- Step-by-step instructions to reproduce the issue
+- Proof-of-concept or exploit code (if possible)
+- Impact of the issue, including how an attacker might exploit the issue
+
+## Response Timeline
+
+- Initial response: Within 48 hours
+- Status update: Within 7 days
+- Resolution target: Within 30 days for critical issues
+
+## Scope
+
+This security policy covers:
+- The main protein-diffusion-design-lab package
+- Official Docker images
+- Web interface components
+- CLI tools
+- Documentation site
+
+Out of scope:
+- Third-party dependencies (report to their maintainers)
+- Issues in deprecated versions
+- Social engineering attacks
+
+## Security Measures
+
+Current security measures include:
+- Automated dependency scanning with Dependabot
+- Static analysis with Bandit
+- Secret scanning with GitGuardian  
+- Container security scanning with Trivy
+- Regular security audits
+- Principle of least privilege in deployments
+- Input validation and sanitization
+- Secure default configurations
+
+## Responsible Disclosure
+
+We appreciate responsible disclosure of security vulnerabilities. 
+Reporters will be acknowledged in our security advisories unless 
+they prefer to remain anonymous.
+
+## Contact
+
+For security-related questions or concerns, contact:
+- security@terragonlabs.io
+- https://github.com/yourusername/protein-diffusion-design-lab/security

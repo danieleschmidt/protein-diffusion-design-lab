@@ -1,0 +1,93 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_ENV": "development"
+            }
+        },
+        {
+            "name": "Python: CLI Tool",
+            "type": "python",
+            "request": "launch",
+            "module": "protein_diffusion.cli",
+            "console": "integratedTerminal",
+            "args": ["--help"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_ENV": "development"
+            }
+        },
+        {
+            "name": "Python: Streamlit App",
+            "type": "python",
+            "request": "launch",
+            "module": "streamlit",
+            "console": "integratedTerminal",
+            "args": ["run", "app.py"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_ENV": "development"
+            }
+        },
+        {
+            "name": "Python: Pytest Current File",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "args": ["${file}", "-v"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_TESTING": "true"
+            }
+        },
+        {
+            "name": "Python: Pytest All Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "args": ["tests/", "-v"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_TESTING": "true"
+            }
+        },
+        {
+            "name": "Python: Debug with GPU",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PROTEIN_DIFFUSION_ENV": "development",
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Docker: Run Container",
+            "type": "docker",
+            "request": "launch",
+            "preLaunchTask": "docker-build",
+            "python": {
+                "pathMappings": [
+                    {
+                        "localRoot": "${workspaceFolder}",
+                        "remoteRoot": "/app"
+                    }
+                ],
+                "projectType": "general"
+            }
+        }
+    ]
+}

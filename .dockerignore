@@ -1,0 +1,143 @@
+# Dockerignore for protein-diffusion-design-lab
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+cover/
+.hypothesis/
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Documentation build
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Model weights and data (should be mounted as volumes)
+weights/
+models/
+checkpoints/
+data/raw/
+data/processed/
+*.ckpt
+*.pth
+*.pkl
+*.h5
+*.hdf5
+
+# Outputs and logs
+outputs/
+logs/
+wandb/
+tensorboard/
+
+# Cache directories
+.cache/
+*.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+.tmp/
+
+# IDE files
+*.sublime-project
+*.sublime-workspace
+
+# Security files
+*.key
+*.pem
+*.cert
+.secrets/
+config/secrets.yaml
+
+# Large files that shouldn't be in container
+*.pdb
+*.cif
+*.mmtf
+*.sdf
+*.mol2
+
+# Build artifacts
+node_modules/
+.sass-cache/
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Documentation source (use built docs instead)
+docs/source/
+*.md
+!README.md
