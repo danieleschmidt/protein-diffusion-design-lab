@@ -1,0 +1,100 @@
+# Logging configuration for protein-diffusion-design-lab
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s - %(lineno)d - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  json:
+    format: '{"timestamp": "%(asctime)s", "logger": "%(name)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d, "message": "%(message)s"}'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+  
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/protein_diffusion.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+  
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: json
+    filename: logs/errors.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 10
+  
+  performance_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: logs/performance.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+
+loggers:
+  protein_diffusion:
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+  
+  protein_diffusion.performance:
+    level: INFO
+    handlers: [performance_file]
+    propagate: false
+  
+  protein_diffusion.security:
+    level: WARNING
+    handlers: [console, error_file]
+    propagate: false
+  
+  torch:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  transformers:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  streamlit:
+    level: INFO
+    handlers: [console]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [console, file]
+
+# Custom configurations for different environments
+environments:
+  development:
+    level: DEBUG
+    console_level: DEBUG
+    file_logging: true
+  
+  testing:
+    level: WARNING
+    console_level: WARNING
+    file_logging: false
+  
+  production:
+    level: INFO
+    console_level: ERROR
+    file_logging: true
+    json_format: true

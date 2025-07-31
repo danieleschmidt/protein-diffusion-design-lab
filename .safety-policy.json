@@ -1,0 +1,34 @@
+{
+  "security": {
+    "ignore-cvss-severity-below": 4.0,
+    "ignore-cvss-unknown-severity": false,
+    "ignore-vulnerabilities": {
+      "reason": "Add specific CVE IDs here with justification",
+      "expires": "2025-12-31",
+      "cve": []
+    },
+    "continue-on-vulnerability-error": false
+  },
+  "report": {
+    "security": {
+      "and": [
+        {
+          "or": [
+            {"severity": "high"},
+            {"severity": "critical"}
+          ]
+        },
+        {
+          "not": {
+            "ignore": true
+          }
+        }
+      ]
+    }
+  },
+  "system": {
+    "packages": {
+      "exclude": []
+    }
+  }
+}

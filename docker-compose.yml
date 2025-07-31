@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Main application service
+  protein-diffusion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./weights:/app/weights
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app/src
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Development service with volume mounting
+  protein-diffusion-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8502:8501"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./weights:/app/weights
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app/src
+      - STREAMLIT_SERVER_RUNON_SAVE=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.fileWatcherType", "poll"]
+    profiles:
+      - dev
+
+  # Testing service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app/src
+    command: ["python", "-m", "pytest", "tests/", "-v", "--cov=src"]
+    profiles:
+      - test
+
+networks:
+  default:
+    name: protein-diffusion-network

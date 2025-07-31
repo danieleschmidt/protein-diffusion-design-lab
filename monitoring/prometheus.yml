@@ -1,0 +1,48 @@
+# Prometheus configuration for protein-diffusion-design-lab
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Application metrics
+  - job_name: 'protein-diffusion-app'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  # GPU metrics (if nvidia-ml-py available)
+  - job_name: 'gpu-exporter'
+    static_configs:
+      - targets: ['localhost:9445']
+
+  # Container metrics (cAdvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['localhost:8080']
+
+  # Python application metrics
+  - job_name: 'python-app'
+    static_configs:
+      - targets: ['localhost:8501']
+    metrics_path: '/_stcore/metrics'
+    scrape_interval: 30s

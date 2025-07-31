@@ -1,0 +1,152 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Protein Diffusion Design Lab - Monitoring Dashboard",
+    "tags": ["protein-diffusion", "ml", "bioinformatics"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"protein-diffusion-app\"}",
+            "legendFormat": "Application Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU Usage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "Memory Usage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "GPU Metrics",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "nvidia_ml_py_memory_used_bytes / nvidia_ml_py_memory_total_bytes * 100",
+            "legendFormat": "GPU Memory Usage %"
+          },
+          {
+            "expr": "nvidia_ml_py_utilization_gpu",
+            "legendFormat": "GPU Utilization %"
+          },
+          {
+            "expr": "nvidia_ml_py_temperature_celsius",
+            "legendFormat": "GPU Temperature °C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Model Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, protein_diffusion_inference_duration_seconds)",
+            "legendFormat": "95th Percentile Inference Time"
+          },
+          {
+            "expr": "histogram_quantile(0.50, protein_diffusion_inference_duration_seconds)",
+            "legendFormat": "Median Inference Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Request Rate & Errors",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(protein_diffusion_requests_total[5m])",
+            "legendFormat": "Request Rate"
+          },
+          {
+            "expr": "rate(protein_diffusion_errors_total[5m])",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 7,
+        "title": "Model Quality Metrics",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "protein_diffusion_scaffold_diversity",
+            "legendFormat": "Scaffold Diversity"
+          },
+          {
+            "expr": "protein_diffusion_folding_success_rate",
+            "legendFormat": "Folding Success Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

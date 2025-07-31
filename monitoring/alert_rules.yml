@@ -1,0 +1,83 @@
+# Prometheus alert rules for protein-diffusion-design-lab
+groups:
+  - name: protein_diffusion_alerts
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes on {{ $labels.instance }}"
+
+      # GPU memory usage
+      - alert: HighGPUMemoryUsage
+        expr: nvidia_ml_py_memory_used_bytes / nvidia_ml_py_memory_total_bytes * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High GPU memory usage detected"
+          description: "GPU memory usage is above 90% for more than 2 minutes"
+
+      # Application availability
+      - alert: ApplicationDown
+        expr: up{job="protein-diffusion-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application is down"
+          description: "The protein diffusion application has been down for more than 1 minute"
+
+      # Model inference time
+      - alert: SlowInferenceTime
+        expr: histogram_quantile(0.95, protein_diffusion_inference_duration_seconds) > 30
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow model inference detected"
+          description: "95th percentile inference time is above 30 seconds"
+
+      # Error rate
+      - alert: HighErrorRate
+        expr: rate(protein_diffusion_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for more than 2 minutes"
+
+      # Disk space
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10% on {{ $labels.instance }}"
+
+      # Temperature monitoring (if available)
+      - alert: HighGPUTemperature
+        expr: nvidia_ml_py_temperature_celsius > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High GPU temperature"
+          description: "GPU temperature is above 85°C for more than 5 minutes"
