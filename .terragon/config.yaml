@@ -1,0 +1,59 @@
+scoring:
+  weights:
+    developing:
+      wsjf: 0.5
+      ice: 0.2
+      technicalDebt: 0.2
+      security: 0.1
+  
+  thresholds:
+    minScore: 10
+    maxRisk: 0.8
+    securityBoost: 2.0
+    complianceBoost: 1.8
+
+discovery:
+  sources:
+    - gitHistory
+    - staticAnalysis
+    - issueTrackers
+    - vulnerabilityDatabases
+    - performanceMonitoring
+  
+  tools:
+    staticAnalysis:
+      - flake8
+      - mypy
+      - bandit
+    security:
+      - safety
+      - bandit
+      - ggshield
+
+execution:
+  maxConcurrentTasks: 1
+  testRequirements:
+    minCoverage: 80
+    performanceRegression: 5
+  rollbackTriggers:
+    - testFailure
+    - buildFailure
+    - securityViolation
+
+repository:
+  maturity: developing
+  assessment:
+    strengths:
+      - comprehensive_documentation
+      - testing_infrastructure
+      - code_quality_tools
+      - security_scanning
+      - docker_support
+    gaps:
+      - github_actions_workflows
+      - dependency_automation
+      - automated_releases
+      - issue_templates
+      - codeowners
+      - deployment_docs
+    nextLevel: maturing

@@ -1,0 +1,39 @@
+# Global ownership - repository maintainers review all changes
+* @danieleschmidt
+
+# Core source code - requires protein ML expertise
+/src/protein_diffusion/ @danieleschmidt
+
+# Model architecture and training
+/src/protein_diffusion/models/ @danieleschmidt
+/src/protein_diffusion/training/ @danieleschmidt
+
+# Configuration and infrastructure
+/docker-compose.yml @danieleschmidt
+/Dockerfile @danieleschmidt
+/pyproject.toml @danieleschmidt
+/.github/ @danieleschmidt
+
+# Documentation - can be reviewed by docs team
+/docs/ @danieleschmidt
+/README.md @danieleschmidt
+/CONTRIBUTING.md @danieleschmidt
+
+# Security and compliance
+/SECURITY.md @danieleschmidt
+/.safety-policy.json @danieleschmidt
+/bandit.yaml @danieleschmidt
+
+# Testing infrastructure
+/tests/ @danieleschmidt
+/pytest.ini @danieleschmidt
+/tox.ini @danieleschmidt
+
+# CI/CD and automation
+/.github/workflows/ @danieleschmidt
+/.pre-commit-config.yaml @danieleschmidt
+/Makefile @danieleschmidt
+
+# Monitoring and observability
+/monitoring/ @danieleschmidt
+/config/monitoring/ @danieleschmidt
