@@ -1,0 +1,84 @@
+{
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.formatting.provider": "black",
+  "python.sortImports.provider": "isort",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true,
+    "source.fixAll.flake8": true
+  },
+  "editor.rulers": [88],
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    ".pytest_cache": true,
+    ".coverage": true,
+    ".mypy_cache": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/.git": false,
+    "dist": true,
+    "build": true,
+    "*.egg-info": true,
+    "wandb": true,
+    "outputs": true,
+    "checkpoints": true,
+    "logs": true
+  },
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    ".pytest_cache": true,
+    ".mypy_cache": true,
+    "dist": true,
+    "build": true,
+    "*.egg-info": true,
+    "wandb": true,
+    "outputs": true,
+    "checkpoints": true,
+    "logs": true
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.completeFunctionParens": true,
+  "jupyter.askForKernelRestart": false,
+  "jupyter.interactiveWindow.cellMarker.codeRegex": "^(# %%|#%%|# <codecell>|# In\\[([0-9]*)\\]|#<codecell>)",
+  "jupyter.interactiveWindow.cellMarker.default": "# %%",
+  "workbench.editorAssociations": {
+    "*.ipynb": "jupyter-notebook"
+  },
+  "files.associations": {
+    "*.pdb": "plaintext",
+    "*.fasta": "plaintext",
+    "*.fa": "plaintext",
+    "*.seq": "plaintext",
+    "*.yaml": "yaml",
+    "*.yml": "yaml"
+  },
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}/src:${env:PYTHONPATH}"
+  },
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}/src:${env:PYTHONPATH}"
+  },
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}/src;${env:PYTHONPATH}"
+  },
+  "python.envFile": "${workspaceFolder}/.env",
+  "python.terminal.activateEnvironment": true,
+  "autoDocstring.docstringFormat": "google",
+  "autoDocstring.startOnNewLine": false,
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml",
+    "https://json.schemastore.org/pre-commit-config.json": ".pre-commit-config.yaml"
+  }
+}

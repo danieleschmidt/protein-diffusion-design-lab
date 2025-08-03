@@ -1,0 +1,69 @@
+# Development Dockerfile for Protein Diffusion Design Lab
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH=/workspace/src:$PYTHONPATH
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    wget \
+    vim \
+    tmux \
+    htop \
+    tree \
+    zip \
+    unzip \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional scientific computing dependencies
+RUN apt-get update && apt-get install -y \
+    libhdf5-dev \
+    libnetcdf-dev \
+    libopenmpi-dev \
+    openmpi-bin \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install biological/chemical software dependencies
+RUN apt-get update && apt-get install -y \
+    pymol \
+    muscle \
+    clustalw \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Copy requirements first for better caching
+COPY requirements*.txt pyproject.toml ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+# Install project in development mode
+COPY . .
+RUN pip install -e .[dev]
+
+# Create directories for data and outputs
+RUN mkdir -p /workspace/data /workspace/outputs /workspace/checkpoints /workspace/logs
+
+# Set up development environment
+RUN echo 'export PYTHONPATH=/workspace/src:$PYTHONPATH' >> ~/.bashrc
+RUN echo 'cd /workspace' >> ~/.bashrc
+
+# Expose ports for development servers
+EXPOSE 8501 8888 6006
+
+# Default command for development
+CMD ["bash"]
