@@ -29,7 +29,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/protein-diffusion-design-lab.git
+git clone https://github.com/danieleschmidt/protein-diffusion-design-lab.git
 cd protein-diffusion-design-lab
 
 # Create conda environment
@@ -184,9 +184,9 @@ isort src/
 ```bibtex
 @software{protein_diffusion_design_lab,
   title = {Protein Diffusion Design Lab: Open-Source Protein Engineering},
-  author = {Your Name},
+  author = {Daniel Schmidt},
   year = {2025},
-  url = {https://github.com/yourusername/protein-diffusion-design-lab}
+  url = {https://github.com/danieleschmidt/protein-diffusion-design-lab}
 }
 ```
 
