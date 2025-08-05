@@ -1,0 +1,208 @@
+version: '3.8'
+
+services:
+  # Main application
+  protein-diffusion-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: production
+    image: protein-diffusion:latest
+    container_name: protein-diffusion-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - WORKERS=4
+      - MAX_REQUESTS=1000
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://protein_user:${POSTGRES_PASSWORD}@postgres:5432/protein_db
+      - MODEL_CACHE_SIZE=5000
+      - ENABLE_MONITORING=true
+    volumes:
+      - ./config/production.yaml:/app/config/production.yaml:ro
+      - protein_models:/app/models
+      - protein_data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '2.0'
+        reservations:
+          memory: 4G
+          cpus: '1.0'
+    networks:
+      - protein-network
+
+  # Streamlit web interface
+  protein-diffusion-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: web
+    image: protein-diffusion-web:latest
+    container_name: protein-diffusion-web
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://protein-diffusion-api:8000
+      - ENVIRONMENT=production
+    volumes:
+      - ./config/streamlit.toml:/app/.streamlit/config.toml:ro
+    depends_on:
+      - protein-diffusion-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/healthz"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    networks:
+      - protein-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: protein-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - protein_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - protein-network
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: protein-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=protein_db
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - protein_postgres_data:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U protein_user -d protein_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - protein-network
+
+  # NGINX reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: protein-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - protein-diffusion-api
+      - protein-diffusion-web
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - protein-network
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: protein-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - protein_prometheus_data:/prometheus
+    networks:
+      - protein-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: protein-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - protein_grafana_data:/var/lib/grafana
+      - ../monitoring/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/protein-dashboard.json:ro
+      - ../monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - protein-network
+
+  # Node exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: protein-node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - protein-network
+
+networks:
+  protein-network:
+    driver: bridge
+
+volumes:
+  protein_models:
+    driver: local
+  protein_data:
+    driver: local
+  protein_redis_data:
+    driver: local
+  protein_postgres_data:
+    driver: local
+  protein_prometheus_data:
+    driver: local
+  protein_grafana_data:
+    driver: local

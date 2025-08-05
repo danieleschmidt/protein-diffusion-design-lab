@@ -1,0 +1,207 @@
+# Production configuration for Protein Diffusion Design Lab
+
+# Application settings
+app:
+  name: "Protein Diffusion Design Lab"
+  version: "1.0.0"
+  environment: "production"
+  debug: false
+  
+# Server settings
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  worker_class: "uvicorn.workers.UvicornWorker"
+  worker_connections: 1000
+  max_requests: 1000
+  max_requests_jitter: 100
+  timeout: 300
+  keepalive: 2
+  
+# Model settings
+model:
+  # Default model configuration
+  checkpoint_path: "/app/models/protein_diffusion_1b.ckpt"
+  device: "cuda"  # or "cpu" if no GPU
+  dtype: "float16"  # Use half precision for memory efficiency
+  
+  # Generation defaults
+  max_length: 512
+  num_samples: 10
+  temperature: 1.0
+  guidance_scale: 1.0
+  
+  # Model optimization
+  use_jit: true
+  use_half_precision: true
+  enable_flash_attention: true
+  
+# Caching settings
+cache:
+  backend: "redis"
+  redis_url: "${REDIS_URL}"
+  expire_time: 3600  # 1 hour
+  max_memory: "2gb"
+  
+  # Cache sizes
+  sequence_cache_size: 5000
+  structure_cache_size: 1000
+  
+# Database settings
+database:
+  url: "${POSTGRES_URL}"
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  
+# Security settings
+security:
+  # Rate limiting
+  max_requests_per_minute: 60
+  max_requests_per_hour: 1000
+  max_concurrent_requests: 10
+  
+  # Input validation
+  max_sequence_length: 2000
+  max_batch_size: 100
+  max_file_size_mb: 50
+  
+  # Authentication (if enabled)
+  require_authentication: false
+  jwt_secret: "${JWT_SECRET}"
+  jwt_expiry: 3600
+  
+# Logging settings
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/app/logs/protein_diffusion.log"
+  max_size: "100MB"
+  backup_count: 5
+  
+  # Component-specific levels
+  levels:
+    "src.protein_diffusion": "INFO"
+    "uvicorn": "INFO"
+    "uvicorn.access": "INFO"
+    "sqlalchemy": "WARNING"
+    
+# Monitoring settings
+monitoring:
+  enabled: true
+  metrics_port: 9000
+  health_check_interval: 30
+  
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    endpoint: "/metrics"
+    
+  # System monitoring
+  system_monitoring:
+    enabled: true
+    interval: 5
+    
+# Auto-scaling settings
+scaling:
+  enabled: true
+  min_instances: 1
+  max_instances: 5
+  
+  # Scale-up thresholds
+  scale_up_cpu_threshold: 0.8
+  scale_up_memory_threshold: 0.8
+  scale_up_response_time_threshold: 5.0
+  scale_up_queue_threshold: 50
+  
+  # Scale-down thresholds
+  scale_down_cpu_threshold: 0.3
+  scale_down_memory_threshold: 0.3
+  scale_down_response_time_threshold: 1.0
+  scale_down_idle_time: 300
+  
+  # Cooldown periods
+  scale_up_cooldown: 60
+  scale_down_cooldown: 300
+  
+# Performance settings
+performance:
+  # Batch processing
+  batch_size: 16
+  max_batch_size: 32
+  batch_timeout: 30
+  
+  # Memory optimization
+  memory_limit_gb: 8
+  gpu_memory_fraction: 0.8
+  enable_memory_optimization: true
+  
+  # Async processing
+  max_workers: 4
+  worker_queue_size: 100
+  
+# Feature flags
+features:
+  enable_structure_prediction: true
+  enable_binding_affinity: true
+  enable_batch_processing: true
+  enable_async_processing: true
+  enable_web_interface: true
+  enable_api_docs: true
+  
+# External services
+external_services:
+  # ESMFold (if available)
+  esmfold:
+    enabled: true
+    url: "http://esmfold-service:8080"
+    timeout: 300
+    
+  # ColabFold (if available)
+  colabfold:
+    enabled: false
+    path: "/usr/local/bin/colabfold_batch"
+    
+  # FoldSeek (if available)
+  foldseek:
+    enabled: false
+    path: "/usr/local/bin/foldseek"
+    
+# Backup and data retention
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention_days: 30
+  
+  # What to backup
+  backup_models: true
+  backup_cache: false
+  backup_logs: true
+  backup_database: true
+  
+# Alert settings
+alerts:
+  enabled: true
+  
+  # Alert channels
+  email:
+    enabled: false
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    username: "${SMTP_USERNAME}"
+    password: "${SMTP_PASSWORD}"
+    from_addr: "alerts@protein-diffusion.com"
+    to_addrs: ["admin@protein-diffusion.com"]
+    
+  webhook:
+    enabled: false
+    url: "${WEBHOOK_URL}"
+    
+  # Alert conditions
+  conditions:
+    high_error_rate: 0.1  # Alert if error rate > 10%
+    high_response_time: 10.0  # Alert if avg response time > 10s
+    low_memory: 0.1  # Alert if free memory < 10%
+    high_cpu: 0.9  # Alert if CPU usage > 90%
