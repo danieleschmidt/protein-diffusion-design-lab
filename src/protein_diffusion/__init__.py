@@ -12,8 +12,9 @@ __email__ = "your.email@example.com"
 from .diffuser import ProteinDiffuser, ProteinDiffuserConfig
 from .ranker import AffinityRanker, AffinityRankerConfig
 from .models import DiffusionTransformer, DDPM, DiffusionTransformerConfig, DDPMConfig
-from .tokenization import SELFIESTokenizer, ProteinEmbeddings, TokenizerConfig, EmbeddingConfig
-from .folding import StructurePredictor, StructurePredictorConfig
+from .tokenization.selfies_tokenizer import SELFIESTokenizer, TokenizerConfig
+from .tokenization.protein_embeddings import ProteinEmbeddings, EmbeddingConfig
+from .folding.structure_predictor import StructurePredictor, StructurePredictorConfig
 
 __all__ = [
     "__version__",

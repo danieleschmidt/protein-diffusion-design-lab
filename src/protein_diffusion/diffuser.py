@@ -12,11 +12,25 @@ from pathlib import Path
 import numpy as np
 from dataclasses import dataclass
 import logging
+import warnings
 
 from .models import DiffusionTransformer, DDPM, DiffusionTransformerConfig, DDPMConfig
-from .tokenization import SELFIESTokenizer, ProteinEmbeddings, TokenizerConfig, EmbeddingConfig
-from .folding import StructurePredictor, StructurePredictorConfig
+from .tokenization.selfies_tokenizer import SELFIESTokenizer, TokenizerConfig
+from .tokenization.protein_embeddings import ProteinEmbeddings, EmbeddingConfig
+from .folding.structure_predictor import StructurePredictor, StructurePredictorConfig
+try:
+    from .validation import ValidationError as ProteinValidationError, ValidationManager
+    from .security import SecurityManager, SecurityConfig
+    SECURITY_AVAILABLE = True
+except ImportError:
+    SECURITY_AVAILABLE = False
+    ProteinValidationError = ValueError
+    ValidationManager = None
+    SecurityManager = None
+    SecurityConfig = None
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -181,6 +195,7 @@ class ProteinDiffuser:
         ddim_steps: int = 50,
         progress: bool = True,
         return_intermediates: bool = False,
+        client_id: str = "default",
     ) -> List[Dict[str, Union[str, torch.Tensor, float]]]:
         """
         Generate protein scaffolds using the diffusion model.
@@ -195,78 +210,156 @@ class ProteinDiffuser:
             ddim_steps: Number of DDIM steps (if using DDIM)
             progress: Show progress bar
             return_intermediates: Return intermediate sampling states
+            client_id: Client identifier for rate limiting
             
         Returns:
             List of generated protein scaffolds with metadata
         """
-        # Use config defaults if not specified
-        if num_samples is None:
-            num_samples = self.config.num_samples
-        if max_length is None:
-            max_length = self.config.max_length
-        if temperature is None:
-            temperature = self.config.temperature
-        if guidance_scale is None:
-            guidance_scale = self.config.guidance_scale
-        
-        logger.info(f"Generating {num_samples} protein scaffolds with motif: {motif}")
-        
-        with torch.no_grad():
-            # Prepare motif conditioning
-            motif_conditioning = None
-            if motif is not None:
-                motif_conditioning = self._encode_motif(motif, num_samples, max_length)
+        try:
+            # Input validation and sanitization
+            if SECURITY_AVAILABLE:
+                validation_manager = ValidationManager()
+                generation_params = {
+                    'num_samples': num_samples or self.config.num_samples,
+                    'max_length': max_length or self.config.max_length,
+                    'temperature': temperature or self.config.temperature,
+                    'guidance_scale': guidance_scale or self.config.guidance_scale,
+                }
+                validation_result = validation_manager.comprehensive_validation(
+                    generation_params=generation_params
+                )
+                
+                if not validation_result.is_valid:
+                    raise ProteinValidationError(f"Validation failed: {validation_result.errors}")
+                
+                if validation_result.warnings:
+                    for warning in validation_result.warnings:
+                        logger.warning(f"Generation warning: {warning}")
             
-            # Generate samples
-            if sampling_method == "ddpm":
-                samples = self.ddpm.sample(
-                    shape=(num_samples, max_length),
-                    device=self.device,
-                    motif_conditioning=motif_conditioning,
-                    progress=progress,
-                )
-            elif sampling_method == "ddim":
-                samples = self.ddpm.ddim_sample(
-                    shape=(num_samples, max_length),
-                    device=self.device,
-                    ddim_steps=ddim_steps,
-                    motif_conditioning=motif_conditioning,
-                    progress=progress,
-                )
-            else:
+            # Use config defaults if not specified
+            if num_samples is None:
+                num_samples = self.config.num_samples
+            if max_length is None:
+                max_length = self.config.max_length
+            if temperature is None:
+                temperature = self.config.temperature
+            if guidance_scale is None:
+                guidance_scale = self.config.guidance_scale
+            
+            # Additional safety checks
+            if num_samples <= 0 or num_samples > 1000:
+                raise ValueError(f"Invalid num_samples: {num_samples}")
+            if max_length <= 0 or max_length > 2048:
+                raise ValueError(f"Invalid max_length: {max_length}")
+            if temperature <= 0 or temperature > 5.0:
+                raise ValueError(f"Invalid temperature: {temperature}")
+            if sampling_method not in ["ddpm", "ddim"]:
                 raise ValueError(f"Unknown sampling method: {sampling_method}")
             
-            # Apply temperature scaling
-            if temperature != 1.0:
-                samples = samples / temperature
+            logger.info(f"Generating {num_samples} protein scaffolds with motif: {motif}")
             
-            # Convert to sequences
-            results = []
-            for i, sample in enumerate(samples):
-                # Convert logits to tokens
-                token_ids = torch.argmax(sample, dim=-1).cpu()
+            with torch.no_grad():
+                try:
+                    # Prepare motif conditioning
+                    motif_conditioning = None
+                    if motif is not None:
+                        motif_conditioning = self._encode_motif(motif, num_samples, max_length)
+                    
+                    # Generate samples
+                    if sampling_method == "ddpm":
+                        samples = self.ddpm.sample(
+                            shape=(num_samples, max_length),
+                            device=self.device,
+                            motif_conditioning=motif_conditioning,
+                            progress=progress,
+                        )
+                    elif sampling_method == "ddim":
+                        samples = self.ddpm.ddim_sample(
+                            shape=(num_samples, max_length),
+                            device=self.device,
+                            ddim_steps=ddim_steps,
+                            motif_conditioning=motif_conditioning,
+                            progress=progress,
+                        )
+                    else:
+                        raise ValueError(f"Unknown sampling method: {sampling_method}")
+                    
+                    # Apply temperature scaling
+                    if temperature != 1.0:
+                        samples = samples / temperature
+                    
+                    # Check for NaN or inf values
+                    if torch.isnan(samples).any():
+                        logger.error("NaN values detected in generated samples")
+                        raise RuntimeError("Generation produced NaN values")
+                    if torch.isinf(samples).any():
+                        logger.error("Infinite values detected in generated samples")
+                        raise RuntimeError("Generation produced infinite values")
+                    
+                    # Convert to sequences
+                    results = []
+                    for i, sample in enumerate(samples):
+                        try:
+                            # Convert logits to tokens
+                            token_ids = torch.argmax(sample, dim=-1).cpu()
+                            
+                            # Decode to sequence
+                            sequence = self.tokenizer.decode(token_ids, skip_special_tokens=True)
+                            
+                            # Basic sequence validation
+                            if not sequence or len(sequence) < 5:
+                                logger.warning(f"Generated very short sequence {i}: {sequence}")
+                                continue
+                            
+                            # Calculate confidence (approximation from logit magnitudes)
+                            with torch.no_grad():
+                                confidence = torch.max(torch.softmax(sample, dim=-1), dim=-1)[0].mean().item()
+                            
+                            result = {
+                                "sequence": sequence,
+                                "token_ids": token_ids,
+                                "logits": sample.cpu() if return_intermediates else None,
+                                "confidence": confidence,
+                                "length": len(sequence),
+                                "motif": motif,
+                                "sample_id": i,
+                                "generation_params": {
+                                    "temperature": temperature,
+                                    "guidance_scale": guidance_scale,
+                                    "sampling_method": sampling_method,
+                                }
+                            }
+                            
+                            results.append(result)
+                            
+                        except Exception as e:
+                            logger.error(f"Error processing sample {i}: {e}")
+                            continue
+                    
+                    if not results:
+                        raise RuntimeError("No valid sequences generated")
+                    
+                    logger.info(f"Generated {len(results)} sequences with average length {np.mean([r['length'] for r in results]):.1f}")
+                    
+                    return results
                 
-                # Decode to sequence
-                sequence = self.tokenizer.decode(token_ids, skip_special_tokens=True)
-                
-                # Calculate confidence (approximation from logit magnitudes)
-                confidence = torch.max(torch.softmax(sample, dim=-1), dim=-1)[0].mean().item()
-                
-                result = {
-                    "sequence": sequence,
-                    "token_ids": token_ids,
-                    "logits": sample.cpu() if return_intermediates else None,
-                    "confidence": confidence,
-                    "length": len(sequence),
-                    "motif": motif,
-                    "sample_id": i,
-                }
-                
-                results.append(result)
+                except torch.cuda.OutOfMemoryError:
+                    logger.error("GPU out of memory during generation")
+                    raise RuntimeError("Insufficient GPU memory for generation")
+                except Exception as e:
+                    logger.error(f"Error during sample generation: {e}")
+                    raise
         
-        logger.info(f"Generated {len(results)} sequences with average length {np.mean([r['length'] for r in results]):.1f}")
-        
-        return results
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            # Return empty list with error information instead of crashing
+            return [{
+                "error": str(e),
+                "sequence": "",
+                "confidence": 0.0,
+                "length": 0,
+                "sample_id": -1,
+            }]
     
     def _encode_motif(self, motif: str, batch_size: int, max_length: int) -> torch.Tensor:
         """

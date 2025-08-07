@@ -1,0 +1,383 @@
+# Prometheus alerting rules for Protein Diffusion Design Lab
+# Production-ready alerts with appropriate thresholds and severity levels
+
+groups:
+  # Application Health Alerts
+  - name: protein_diffusion_health
+    rules:
+      - alert: APIDown
+        expr: up{job="protein-diffusion-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+          team: platform
+        annotations:
+          summary: "Protein Diffusion API is down"
+          description: "The Protein Diffusion API has been down for more than 1 minute. Service: {{ $labels.instance }}"
+          runbook_url: "https://wiki.company.com/runbooks/protein-diffusion-api-down"
+
+      - alert: WebInterfaceDown
+        expr: up{job="protein-diffusion-web"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: web
+          team: platform
+        annotations:
+          summary: "Protein Diffusion Web Interface is down"
+          description: "The Protein Diffusion web interface has been down for more than 2 minutes"
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: database
+          team: platform
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been unreachable for more than 30 seconds"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cache
+          team: platform
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been unreachable for more than 1 minute"
+
+  # Performance Alerts
+  - name: protein_diffusion_performance
+    rules:
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="protein-diffusion-api"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+          team: platform
+        annotations:
+          summary: "High API response times"
+          description: "95th percentile response time is {{ $value }}s, which is above the 5s threshold"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="protein-diffusion-api",status=~"5.."}[5m]) / rate(http_requests_total{job="protein-diffusion-api"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: api
+          team: platform
+        annotations:
+          summary: "High error rate in API"
+          description: "Error rate is {{ $value | humanizePercentage }}, which is above the 5% threshold"
+
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_total{job="protein-diffusion-api",status=~"5.."}[5m]) / rate(http_requests_total{job="protein-diffusion-api"}[5m]) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+          team: platform
+        annotations:
+          summary: "Critical error rate in API"
+          description: "Error rate is {{ $value | humanizePercentage }}, which is above the 20% critical threshold"
+
+      - alert: LowThroughput
+        expr: rate(http_requests_total{job="protein-diffusion-api"}[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+          team: platform
+        annotations:
+          summary: "Low API throughput"
+          description: "API throughput is {{ $value }} requests/second, which is unusually low"
+
+  # Resource Usage Alerts
+  - name: protein_diffusion_resources
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "Critical CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}, immediate attention required"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}, risk of OOM"
+
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+
+      - alert: CriticalDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "Critical disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} ({{ $labels.mountpoint }}), immediate cleanup required"
+
+  # GPU Resource Alerts (if available)
+  - name: protein_diffusion_gpu
+    rules:
+      - alert: GPUMemoryHigh
+        expr: (nvidia_ml_py_memory_used_bytes / nvidia_ml_py_memory_total_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: gpu
+          team: ml
+        annotations:
+          summary: "High GPU memory usage"
+          description: "GPU memory usage is {{ $value }}% on GPU {{ $labels.gpu }}"
+
+      - alert: GPUUtilizationLow
+        expr: nvidia_ml_py_utilization_gpu < 10
+        for: 15m
+        labels:
+          severity: info
+          service: gpu
+          team: ml
+        annotations:
+          summary: "Low GPU utilization"
+          description: "GPU utilization is {{ $value }}% on GPU {{ $labels.gpu }}, consider resource optimization"
+
+      - alert: GPUTemperatureHigh
+        expr: nvidia_ml_py_temperature_gpu > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: gpu
+          team: ml
+        annotations:
+          summary: "High GPU temperature"
+          description: "GPU temperature is {{ $value }}°C on GPU {{ $labels.gpu }}"
+
+  # Database Specific Alerts
+  - name: protein_diffusion_database
+    rules:
+      - alert: PostgreSQLConnectionsHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          team: platform
+        annotations:
+          summary: "High PostgreSQL connections"
+          description: "PostgreSQL has {{ $value }} active connections"
+
+      - alert: PostgreSQLSlowQueries
+        expr: pg_stat_activity_max_tx_duration > 300
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+          team: platform
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Longest running transaction has been active for {{ $value }} seconds"
+
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag > 60
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+          team: platform
+        annotations:
+          summary: "PostgreSQL replication lag"
+          description: "PostgreSQL replication lag is {{ $value }} seconds"
+
+  # Cache Specific Alerts
+  - name: protein_diffusion_cache
+    rules:
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+          team: platform
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value }}%"
+
+      - alert: RedisCacheHitRateLow
+        expr: redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) < 0.8
+        for: 10m
+        labels:
+          severity: info
+          service: cache
+          team: platform
+        annotations:
+          summary: "Low Redis cache hit rate"
+          description: "Redis cache hit rate is {{ $value | humanizePercentage }}, consider cache optimization"
+
+  # Business Logic Alerts
+  - name: protein_diffusion_business
+    rules:
+      - alert: GenerationRequestsHigh
+        expr: rate(protein_generation_requests_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: info
+          service: api
+          team: ml
+        annotations:
+          summary: "High protein generation request rate"
+          description: "Protein generation request rate is {{ $value }} per second"
+
+      - alert: GenerationFailureRateHigh
+        expr: rate(protein_generation_failures_total[5m]) / rate(protein_generation_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+          team: ml
+        annotations:
+          summary: "High protein generation failure rate"
+          description: "Protein generation failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: LongRunningGenerations
+        expr: protein_generation_duration_seconds{quantile="0.95"} > 600
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+          team: ml
+        annotations:
+          summary: "Long running protein generations"
+          description: "95th percentile generation time is {{ $value }} seconds"
+
+  # Security Alerts
+  - name: protein_diffusion_security
+    rules:
+      - alert: RateLimitExceeded
+        expr: increase(http_requests_total{status="429"}[5m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          service: security
+          team: platform
+        annotations:
+          summary: "Rate limit exceeded"
+          description: "{{ $value }} rate limit violations in the last 5 minutes"
+
+      - alert: AuthenticationFailures
+        expr: increase(authentication_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+          team: platform
+        annotations:
+          summary: "Multiple authentication failures"
+          description: "{{ $value }} authentication failures in the last 5 minutes"
+
+      - alert: UnauthorizedAccess
+        expr: increase(http_requests_total{status="403"}[5m]) > 20
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+          team: platform
+        annotations:
+          summary: "Unauthorized access attempts"
+          description: "{{ $value }} unauthorized access attempts in the last 5 minutes"
+
+  # Maintenance and Operational Alerts
+  - name: protein_diffusion_operations
+    rules:
+      - alert: BackupFailed
+        expr: increase(backup_failures_total[24h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backup
+          team: platform
+        annotations:
+          summary: "Backup failed"
+          description: "Database backup has failed. Check backup logs immediately"
+
+      - alert: CertificateExpiry
+        expr: (ssl_cert_expiry_timestamp - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          service: ssl
+          team: platform
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate expires in {{ $value }} days"
+
+      - alert: LogVolumeHigh
+        expr: rate(log_entries_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          service: logging
+          team: platform
+        annotations:
+          summary: "High log volume"
+          description: "Log entry rate is {{ $value }} per second, investigate for issues"
+
+      - alert: ContainerRestarts
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          service: kubernetes
+          team: platform
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
