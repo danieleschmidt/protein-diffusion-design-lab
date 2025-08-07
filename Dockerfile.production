@@ -1,0 +1,275 @@
+# Multi-stage production Dockerfile for protein-diffusion-design-lab
+# Optimized for ML workloads with CUDA support and security best practices
+
+###############################################################################
+# Base stage - Common dependencies and setup
+###############################################################################
+FROM nvidia/cuda:12.1-runtime-ubuntu22.04 as base
+
+# Security and performance environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
+
+# Create non-root user for security
+RUN groupadd --gid 1000 protein_user && \
+    useradd --uid 1000 --gid protein_user --shell /bin/bash --create-home protein_user
+
+# Install system dependencies with security updates
+RUN apt-get update && apt-get install -y \
+    # Python and build tools
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    python3.10-venv \
+    build-essential \
+    # System utilities
+    curl \
+    wget \
+    ca-certificates \
+    gnupg \
+    # Security tools
+    unzip \
+    # Clean up
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Upgrade pip and install security tools
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Set up application directory
+WORKDIR /app
+RUN chown protein_user:protein_user /app
+
+###############################################################################
+# Dependencies stage - Install Python packages
+###############################################################################
+FROM base as dependencies
+
+# Copy dependency files
+COPY requirements.txt requirements-dev.txt ./
+
+# Install Python dependencies with security considerations
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir \
+        # Core ML dependencies
+        torch>=2.0.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+###############################################################################
+# Production API stage
+###############################################################################
+FROM dependencies as production
+
+# Set production environment variables
+ENV ENVIRONMENT=production \
+    LOG_LEVEL=INFO \
+    WORKERS=4 \
+    MAX_REQUESTS=1000 \
+    TIMEOUT=300 \
+    KEEPALIVE=2 \
+    MAX_REQUESTS_JITTER=100 \
+    PRELOAD_APP=true
+
+# Copy application code
+COPY --chown=protein_user:protein_user src/ src/
+COPY --chown=protein_user:protein_user *.py ./
+COPY --chown=protein_user:protein_user config/ config/
+COPY --chown=protein_user:protein_user pyproject.toml ./
+
+# Install the package
+RUN pip3 install --no-cache-dir -e .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data /app/models /app/cache && \
+    chown -R protein_user:protein_user /app/logs /app/data /app/models /app/cache
+
+# Security hardening
+RUN find /app -type f -name "*.py" -exec chmod 644 {} \; && \
+    find /app -type d -exec chmod 755 {} \; && \
+    chmod +x /app/*.py
+
+# Switch to non-root user
+USER protein_user
+
+# Expose API port
+EXPOSE 8000
+
+# Health check for API
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Production API command with Gunicorn
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "${WORKERS}", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--max-requests", "${MAX_REQUESTS}", \
+     "--max-requests-jitter", "${MAX_REQUESTS_JITTER}", \
+     "--timeout", "${TIMEOUT}", \
+     "--keepalive", "${KEEPALIVE}", \
+     "--preload", \
+     "--access-logfile", "/app/logs/access.log", \
+     "--error-logfile", "/app/logs/error.log", \
+     "--log-level", "${LOG_LEVEL}", \
+     "app:app"]
+
+###############################################################################
+# Web interface stage (Streamlit)
+###############################################################################
+FROM dependencies as web
+
+# Web-specific environment variables
+ENV STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
+    STREAMLIT_SERVER_ENABLE_CORS=false \
+    STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+
+# Copy application code
+COPY --chown=protein_user:protein_user src/ src/
+COPY --chown=protein_user:protein_user app.py ./
+COPY --chown=protein_user:protein_user config/ config/
+COPY --chown=protein_user:protein_user pyproject.toml ./
+
+# Install the package
+RUN pip3 install --no-cache-dir -e .
+
+# Create Streamlit config directory
+RUN mkdir -p /home/protein_user/.streamlit && \
+    chown protein_user:protein_user /home/protein_user/.streamlit
+
+# Security hardening
+RUN find /app -type f -name "*.py" -exec chmod 644 {} \; && \
+    find /app -type d -exec chmod 755 {} \;
+
+# Switch to non-root user
+USER protein_user
+
+# Expose Streamlit port
+EXPOSE 8501
+
+# Health check for Streamlit
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8501/healthz || exit 1
+
+# Streamlit command
+CMD ["streamlit", "run", "app.py", \
+     "--server.address", "0.0.0.0", \
+     "--server.port", "8501", \
+     "--server.headless", "true", \
+     "--browser.gatherUsageStats", "false", \
+     "--server.enableCORS", "false", \
+     "--server.enableXsrfProtection", "true"]
+
+###############################################################################
+# Worker stage for background processing
+###############################################################################
+FROM dependencies as worker
+
+# Worker environment variables
+ENV CELERY_BROKER_URL=redis://redis:6379/0 \
+    CELERY_RESULT_BACKEND=redis://redis:6379/0 \
+    CELERY_TASK_SERIALIZER=json \
+    CELERY_ACCEPT_CONTENT=json \
+    CELERY_RESULT_SERIALIZER=json \
+    CELERY_TIMEZONE=UTC \
+    CELERY_WORKER_CONCURRENCY=2 \
+    CELERY_WORKER_MAX_TASKS_PER_CHILD=1000
+
+# Copy application code
+COPY --chown=protein_user:protein_user src/ src/
+COPY --chown=protein_user:protein_user *.py ./
+COPY --chown=protein_user:protein_user config/ config/
+COPY --chown=protein_user:protein_user pyproject.toml ./
+
+# Install the package and Celery
+RUN pip3 install --no-cache-dir -e . celery[redis]
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data /app/models && \
+    chown -R protein_user:protein_user /app/logs /app/data /app/models
+
+# Security hardening
+RUN find /app -type f -name "*.py" -exec chmod 644 {} \; && \
+    find /app -type d -exec chmod 755 {} \;
+
+# Switch to non-root user
+USER protein_user
+
+# Health check for worker
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD celery -A app.celery_app inspect ping || exit 1
+
+# Celery worker command
+CMD ["celery", "-A", "app.celery_app", "worker", \
+     "--loglevel=${LOG_LEVEL:-INFO}", \
+     "--concurrency=${CELERY_WORKER_CONCURRENCY}", \
+     "--max-tasks-per-child=${CELERY_WORKER_MAX_TASKS_PER_CHILD}", \
+     "--logfile=/app/logs/celery.log"]
+
+###############################################################################
+# Testing stage
+###############################################################################
+FROM dependencies as testing
+
+# Install testing dependencies
+RUN pip3 install --no-cache-dir pytest pytest-cov pytest-xdist pytest-mock bandit safety
+
+# Copy all code including tests
+COPY --chown=protein_user:protein_user . .
+
+# Install the package in development mode
+RUN pip3 install --no-cache-dir -e .
+
+# Switch to non-root user
+USER protein_user
+
+# Run tests by default
+CMD ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
+
+###############################################################################
+# Development stage
+###############################################################################
+FROM dependencies as development
+
+# Install development dependencies
+COPY requirements-dev.txt ./
+RUN pip3 install --no-cache-dir -r requirements-dev.txt
+
+# Install additional development tools
+RUN pip3 install --no-cache-dir \
+    ipython \
+    jupyter \
+    black \
+    isort \
+    flake8 \
+    mypy \
+    pre-commit
+
+# Copy all code including development files
+COPY --chown=protein_user:protein_user . .
+
+# Install the package in development mode
+RUN pip3 install --no-cache-dir -e .
+
+# Set development environment
+ENV ENVIRONMENT=development \
+    LOG_LEVEL=DEBUG \
+    PYTHONPATH=/app
+
+# Switch to non-root user
+USER protein_user
+
+# Expose both API and Streamlit ports for development
+EXPOSE 8000 8501
+
+# Development command (can be overridden)
+CMD ["python", "app.py"]
