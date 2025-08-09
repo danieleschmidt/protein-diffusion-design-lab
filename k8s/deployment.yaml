@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: protein-diffusion-app
+  labels:
+    app: protein-diffusion
+    tier: application
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: protein-diffusion
+      tier: application
+  template:
+    metadata:
+      labels:
+        app: protein-diffusion
+        tier: application
+    spec:
+      containers:
+      - name: protein-diffusion
+        image: protein-diffusion:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: PYTHONPATH
+          value: "/app"
+        - name: STREAMLIT_SERVER_PORT
+          value: "8501"
+        - name: STREAMLIT_SERVER_ADDRESS
+          value: "0.0.0.0"
+        - name: REDIS_URL
+          value: "redis://redis-service:6379"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "8Gi"
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: cache-storage
+          mountPath: /app/cache
+        - name: model-storage
+          mountPath: /app/models
+      volumes:
+      - name: cache-storage
+        persistentVolumeClaim:
+          claimName: cache-pvc
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: protein-diffusion-service
+  labels:
+    app: protein-diffusion
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8501
+    targetPort: 8501
+  selector:
+    app: protein-diffusion
+    tier: application
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: protein-diffusion-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - protein-diffusion.terragon.ai
+    secretName: protein-diffusion-tls
+  rules:
+  - host: protein-diffusion.terragon.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: protein-diffusion-service
+            port:
+              number: 8501

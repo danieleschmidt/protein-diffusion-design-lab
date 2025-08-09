@@ -11,12 +11,17 @@ import sys
 import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-import torch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    from . import mock_torch as torch
+    TORCH_AVAILABLE = False
 
 from .diffuser import ProteinDiffuser, ProteinDiffuserConfig
 from .ranker import AffinityRanker, AffinityRankerConfig
-from .folding import StructurePredictor, StructurePredictorConfig
-from .tokenization import SELFIESTokenizer, TokenizerConfig
+from .folding.structure_predictor import StructurePredictor, StructurePredictorConfig
+from .tokenization.selfies_tokenizer import SELFIESTokenizer, TokenizerConfig
 
 
 def setup_logging(verbose: bool = False):

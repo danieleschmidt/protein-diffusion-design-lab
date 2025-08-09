@@ -1,0 +1,524 @@
+{
+  "suite_info": {
+    "timestamp": 1754704027.8635015,
+    "duration_seconds": 2.010104179382324,
+    "config": {
+      "dataset_size": 100,
+      "sequence_lengths": [
+        50,
+        100,
+        200,
+        500
+      ],
+      "batch_sizes": [
+        1,
+        8,
+        16,
+        32
+      ],
+      "model_variants": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "temperature_values": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "evaluate_quality": true,
+      "evaluate_diversity": true,
+      "evaluate_novelty": true,
+      "evaluate_performance": true,
+      "output_dir": "./research/results",
+      "save_intermediate": true,
+      "statistical_significance": 0.05,
+      "num_runs": 3,
+      "random_seeds": [
+        42,
+        123,
+        456
+      ]
+    }
+  },
+  "performance_benchmark": {
+    "config": {
+      "dataset_size": 100,
+      "sequence_lengths": [
+        50,
+        100,
+        200,
+        500
+      ],
+      "batch_sizes": [
+        1,
+        8,
+        16,
+        32
+      ],
+      "model_variants": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "temperature_values": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "evaluate_quality": true,
+      "evaluate_diversity": true,
+      "evaluate_novelty": true,
+      "evaluate_performance": true,
+      "output_dir": "./research/results",
+      "save_intermediate": true,
+      "statistical_significance": 0.05,
+      "num_runs": 3,
+      "random_seeds": [
+        42,
+        123,
+        456
+      ]
+    },
+    "timestamp": 1754704025.853481,
+    "benchmarks": {
+      "tokenization": {
+        "length_50": {
+          "sequence_length": 50,
+          "tokenization_time_ms": 0.03790616989135742,
+          "encoding_time_ms": 0.04463911056518555,
+          "num_tokens": 50,
+          "tokens_per_second": 1319046.480910749
+        },
+        "length_100": {
+          "sequence_length": 100,
+          "tokenization_time_ms": 0.07196187973022461,
+          "encoding_time_ms": 0.09025096893310547,
+          "num_tokens": 100,
+          "tokens_per_second": 1389624.6231322268
+        },
+        "length_200": {
+          "sequence_length": 200,
+          "tokenization_time_ms": 0.14118432998657227,
+          "encoding_time_ms": 0.1751089096069336,
+          "num_tokens": 200,
+          "tokens_per_second": 1416587.8041778544
+        },
+        "length_500": {
+          "sequence_length": 500,
+          "tokenization_time_ms": 0.39932966232299805,
+          "encoding_time_ms": 0.48514842987060547,
+          "num_tokens": 500,
+          "tokens_per_second": 1252098.3217008675
+        }
+      },
+      "validation": {
+        "length_50_type_0": {
+          "sequence_length": 50,
+          "sequence_type": "valid",
+          "validation_time_ms": 0.07809877395629883,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 45
+        },
+        "length_50_type_1": {
+          "sequence_length": 50,
+          "sequence_type": "unknown_residues",
+          "validation_time_ms": 0.07346153259277344,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 46
+        },
+        "length_50_type_2": {
+          "sequence_length": 50,
+          "sequence_type": "invalid",
+          "validation_time_ms": 0.1365947723388672,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 35
+        },
+        "length_100_type_0": {
+          "sequence_length": 100,
+          "sequence_type": "valid",
+          "validation_time_ms": 0.15988826751708984,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 99
+        },
+        "length_100_type_1": {
+          "sequence_length": 100,
+          "sequence_type": "unknown_residues",
+          "validation_time_ms": 0.1648402214050293,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 100
+        },
+        "length_100_type_2": {
+          "sequence_length": 100,
+          "sequence_type": "invalid",
+          "validation_time_ms": 0.41901111602783203,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 87
+        },
+        "length_200_type_0": {
+          "sequence_length": 200,
+          "sequence_type": "valid",
+          "validation_time_ms": 0.32439708709716797,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 199
+        },
+        "length_200_type_1": {
+          "sequence_length": 200,
+          "sequence_type": "unknown_residues",
+          "validation_time_ms": 0.33292531967163086,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 200
+        },
+        "length_200_type_2": {
+          "sequence_length": 200,
+          "sequence_type": "invalid",
+          "validation_time_ms": 0.9593391418457031,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 186
+        },
+        "length_500_type_0": {
+          "sequence_length": 500,
+          "sequence_type": "valid",
+          "validation_time_ms": 0.8437418937683105,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 499
+        },
+        "length_500_type_1": {
+          "sequence_length": 500,
+          "sequence_type": "unknown_residues",
+          "validation_time_ms": 0.8365583419799805,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 500
+        },
+        "length_500_type_2": {
+          "sequence_length": 500,
+          "sequence_type": "invalid",
+          "validation_time_ms": 2.9432249069213867,
+          "is_valid": true,
+          "num_errors": 0,
+          "num_warnings": 486
+        }
+      },
+      "security": {
+        "input_type_0": {
+          "input_type": "clean",
+          "processing_time_ms": 0.007343292236328125,
+          "success_rate": 1.0,
+          "input_length": 15
+        },
+        "input_type_1": {
+          "input_type": "whitespace",
+          "processing_time_ms": 0.00698089599609375,
+          "success_rate": 1.0,
+          "input_length": 21
+        },
+        "input_type_2": {
+          "input_type": "numbers",
+          "processing_time_ms": 0.00787496566772461,
+          "success_rate": 1.0,
+          "input_length": 21
+        },
+        "input_type_3": {
+          "input_type": "malicious",
+          "processing_time_ms": 0.09077787399291992,
+          "success_rate": 0.0,
+          "input_length": 39
+        }
+      }
+    }
+  },
+  "quality_benchmark": {
+    "basic_stats": {
+      "mean_length": 24.4,
+      "min_length": 15,
+      "max_length": 53,
+      "std_length": 14.347125147568763
+    },
+    "amino_acid_composition": {
+      "M": 0.03278688524590164,
+      "A": 0.11475409836065574,
+      "K": 0.07377049180327869,
+      "L": 0.1557377049180328,
+      "I": 0.04918032786885246,
+      "T": 0.08196721311475409,
+      "C": 0.05737704918032787,
+      "V": 0.08196721311475409,
+      "W": 0.02459016393442623,
+      "F": 0.040983606557377046,
+      "S": 0.05737704918032787,
+      "Y": 0.00819672131147541,
+      "G": 0.07377049180327869,
+      "E": 0.04918032786885246,
+      "Q": 0.01639344262295082,
+      "H": 0.03278688524590164,
+      "D": 0.02459016393442623,
+      "R": 0.01639344262295082,
+      "P": 0.00819672131147541
+    },
+    "diversity": {
+      "sequence_diversity": 21.494949494949495,
+      "unique_sequences": 5,
+      "uniqueness_ratio": 0.05
+    },
+    "novelty": {
+      "novelty_score": 0.0
+    },
+    "composition_analysis": {
+      "reference_composition": {
+        "M": 0.03278688524590164,
+        "A": 0.11475409836065574,
+        "K": 0.07377049180327869,
+        "L": 0.1557377049180328,
+        "I": 0.04918032786885246,
+        "T": 0.08196721311475409,
+        "C": 0.05737704918032787,
+        "V": 0.08196721311475409,
+        "W": 0.02459016393442623,
+        "F": 0.040983606557377046,
+        "S": 0.05737704918032787,
+        "Y": 0.00819672131147541,
+        "G": 0.07377049180327869,
+        "E": 0.04918032786885246,
+        "Q": 0.01639344262295082,
+        "H": 0.03278688524590164,
+        "D": 0.02459016393442623,
+        "R": 0.01639344262295082,
+        "P": 0.00819672131147541
+      },
+      "composition_differences": {
+        "M": 0.0,
+        "Y": 0.0,
+        "Q": 0.0,
+        "E": 0.0,
+        "R": 0.0,
+        "S": 0.0,
+        "G": 0.0,
+        "P": 0.0,
+        "L": 0.0,
+        "C": 0.0,
+        "F": 0.0,
+        "H": 0.0,
+        "V": 0.0,
+        "T": 0.0,
+        "W": 0.0,
+        "I": 0.0,
+        "K": 0.0,
+        "D": 0.0,
+        "A": 0.0
+      },
+      "total_composition_error": 0.0
+    }
+  },
+  "comparison_studies": {
+    "timestamp": 1754704027.8562672,
+    "config": {
+      "dataset_size": 100,
+      "sequence_lengths": [
+        50,
+        100,
+        200,
+        500
+      ],
+      "batch_sizes": [
+        1,
+        8,
+        16,
+        32
+      ],
+      "model_variants": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "temperature_values": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "evaluate_quality": true,
+      "evaluate_diversity": true,
+      "evaluate_novelty": true,
+      "evaluate_performance": true,
+      "output_dir": "./research/results",
+      "save_intermediate": true,
+      "statistical_significance": 0.05,
+      "num_runs": 3,
+      "random_seeds": [
+        42,
+        123,
+        456
+      ]
+    },
+    "studies": {
+      "tokenization": {
+        "selfies": {
+          "method_name": "SELFIES",
+          "results": [
+            {
+              "original_length": 15,
+              "num_tokens": 15,
+              "compression_ratio": 1.0,
+              "encoding_time_ms": 0.03361701965332031,
+              "roundtrip_success": true
+            },
+            {
+              "original_length": 52,
+              "num_tokens": 52,
+              "compression_ratio": 1.0,
+              "encoding_time_ms": 0.04100799560546875,
+              "roundtrip_success": true
+            },
+            {
+              "original_length": 54,
+              "num_tokens": 54,
+              "compression_ratio": 1.0,
+              "encoding_time_ms": 0.0400543212890625,
+              "roundtrip_success": true
+            }
+          ],
+          "average_compression": 1.0,
+          "average_time_ms": 0.03822644551595052
+        }
+      },
+      "validation": {
+        "strict": {
+          "validation_level": "strict",
+          "results": [
+            {
+              "sequence": "MAKLLILTCLVAVAL",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.04410743713378906
+            },
+            {
+              "sequence": "MAKLLILTCLVAVALX",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.0247955322265625
+            },
+            {
+              "sequence": "MAKLL123ILTCLVAVAL",
+              "is_valid": false,
+              "num_errors": 1,
+              "num_warnings": 0,
+              "validation_time_ms": 0.03695487976074219
+            },
+            {
+              "sequence": "MMMMM",
+              "is_valid": false,
+              "num_errors": 1,
+              "num_warnings": 1,
+              "validation_time_ms": 0.010728836059570312
+            },
+            {
+              "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 999,
+              "validation_time_ms": 1.7457008361816406
+            }
+          ],
+          "average_time_ms": 0.37245750427246094,
+          "pass_rate": 0.6
+        },
+        "moderate": {
+          "validation_level": "moderate",
+          "results": [
+            {
+              "sequence": "MAKLLILTCLVAVAL",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.05125999450683594
+            },
+            {
+              "sequence": "MAKLLILTCLVAVALX",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.022172927856445312
+            },
+            {
+              "sequence": "MAKLL123ILTCLVAVAL",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 1,
+              "validation_time_ms": 0.03314018249511719
+            },
+            {
+              "sequence": "MMMMM",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 2,
+              "validation_time_ms": 0.010013580322265625
+            },
+            {
+              "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 999,
+              "validation_time_ms": 1.7108917236328125
+            }
+          ],
+          "average_time_ms": 0.3654956817626953,
+          "pass_rate": 1.0
+        },
+        "permissive": {
+          "validation_level": "permissive",
+          "results": [
+            {
+              "sequence": "MAKLLILTCLVAVAL",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.04839897155761719
+            },
+            {
+              "sequence": "MAKLLILTCLVAVALX",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 0,
+              "validation_time_ms": 0.022411346435546875
+            },
+            {
+              "sequence": "MAKLL123ILTCLVAVAL",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 1,
+              "validation_time_ms": 0.05984306335449219
+            },
+            {
+              "sequence": "MMMMM",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 2,
+              "validation_time_ms": 0.022172927856445312
+            },
+            {
+              "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+              "is_valid": true,
+              "num_errors": 0,
+              "num_warnings": 999,
+              "validation_time_ms": 1.6436576843261719
+            }
+          ],
+          "average_time_ms": 0.3592967987060547,
+          "pass_rate": 1.0
+        }
+      }
+    }
+  }
+}

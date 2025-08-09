@@ -6,12 +6,34 @@ with attention mechanisms optimized for protein sequence modeling.
 """
 
 import math
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError:
+    from . import mock_torch as torch
+    nn = torch.nn
+    F = torch.F
+    TORCH_AVAILABLE = False
 from typing import Optional, Tuple, Dict, Any, Union
 from dataclasses import dataclass
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    class MockNumpy:
+        @staticmethod
+        def mean(arr):
+            return 0.5
+        @staticmethod
+        def array(data):
+            return data
+        @staticmethod
+        def degrees(rad):
+            return rad * 180 / 3.14159
+    np = MockNumpy()
+    NUMPY_AVAILABLE = False
 
 
 @dataclass

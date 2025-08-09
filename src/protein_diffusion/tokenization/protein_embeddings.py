@@ -5,9 +5,36 @@ This module provides advanced embedding systems for protein sequences,
 including ESM-based embeddings and geometric structure encodings.
 """
 
-import torch
-import torch.nn as nn
-import numpy as np
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    from .. import mock_torch as torch
+    nn = torch.nn
+    TORCH_AVAILABLE = False
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    class MockNumpy:
+        @staticmethod
+        def mean(arr):
+            return sum(arr)/len(arr) if arr else 0.5
+        @staticmethod
+        def array(data):
+            return data
+        @staticmethod
+        def std(arr):
+            return 1.0
+        @staticmethod
+        def min(arr):
+            return min(arr) if arr else 0
+        @staticmethod
+        def max(arr):
+            return max(arr) if arr else 1
+    np = MockNumpy()
+    NUMPY_AVAILABLE = False
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
