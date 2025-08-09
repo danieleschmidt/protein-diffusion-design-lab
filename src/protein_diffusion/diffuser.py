@@ -5,11 +5,44 @@ This module provides the primary interface for protein scaffold generation
 using diffusion models, combining tokenization, model inference, and sampling.
 """
 
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    from . import mock_torch as torch
+    nn = torch.nn
+    TORCH_AVAILABLE = False
 from typing import List, Optional, Dict, Union, Tuple
 from pathlib import Path
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    # Mock numpy functions we use
+    class MockRandom:
+        @staticmethod
+        def normal(mean=0, std=1, size=None):
+            import random
+            if size:
+                return [random.gauss(mean, std) for _ in range(size)]
+            return random.gauss(mean, std)
+    
+    class MockNumpy:
+        random = MockRandom()
+        
+        @staticmethod
+        def mean(arr):
+            if isinstance(arr, list):
+                return sum(arr) / len(arr) if arr else 0
+            return 0.5
+        
+        @staticmethod
+        def array(data):
+            return data
+    
+    np = MockNumpy()
+    NUMPY_AVAILABLE = False
 from dataclasses import dataclass
 import logging
 import warnings

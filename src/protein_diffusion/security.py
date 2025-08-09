@@ -87,6 +87,9 @@ class InputSanitizer:
         if not isinstance(sequence, str):
             raise ValueError(f"Sequence must be string, got {type(sequence)}")
         
+        # Check for malicious patterns BEFORE sanitization
+        self._check_malicious_patterns(sequence)
+        
         # Basic sanitization
         sequence = sequence.strip().upper()
         
@@ -105,9 +108,6 @@ class InputSanitizer:
         if not self.amino_acid_pattern.match(sequence):
             invalid_chars = set(sequence) - self.config.allowed_amino_acids
             raise ValueError(f"Invalid amino acid codes: {invalid_chars}")
-        
-        # Check for malicious patterns
-        self._check_malicious_patterns(sequence)
         
         return sequence
     

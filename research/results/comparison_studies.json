@@ -1,0 +1,201 @@
+{
+  "timestamp": 1754704027.8562672,
+  "config": {
+    "dataset_size": 100,
+    "sequence_lengths": [
+      50,
+      100,
+      200,
+      500
+    ],
+    "batch_sizes": [
+      1,
+      8,
+      16,
+      32
+    ],
+    "model_variants": [
+      "small",
+      "medium",
+      "large"
+    ],
+    "temperature_values": [
+      0.5,
+      1.0,
+      1.5
+    ],
+    "evaluate_quality": true,
+    "evaluate_diversity": true,
+    "evaluate_novelty": true,
+    "evaluate_performance": true,
+    "output_dir": "./research/results",
+    "save_intermediate": true,
+    "statistical_significance": 0.05,
+    "num_runs": 3,
+    "random_seeds": [
+      42,
+      123,
+      456
+    ]
+  },
+  "studies": {
+    "tokenization": {
+      "selfies": {
+        "method_name": "SELFIES",
+        "results": [
+          {
+            "original_length": 15,
+            "num_tokens": 15,
+            "compression_ratio": 1.0,
+            "encoding_time_ms": 0.03361701965332031,
+            "roundtrip_success": true
+          },
+          {
+            "original_length": 52,
+            "num_tokens": 52,
+            "compression_ratio": 1.0,
+            "encoding_time_ms": 0.04100799560546875,
+            "roundtrip_success": true
+          },
+          {
+            "original_length": 54,
+            "num_tokens": 54,
+            "compression_ratio": 1.0,
+            "encoding_time_ms": 0.0400543212890625,
+            "roundtrip_success": true
+          }
+        ],
+        "average_compression": 1.0,
+        "average_time_ms": 0.03822644551595052
+      }
+    },
+    "validation": {
+      "strict": {
+        "validation_level": "strict",
+        "results": [
+          {
+            "sequence": "MAKLLILTCLVAVAL",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.04410743713378906
+          },
+          {
+            "sequence": "MAKLLILTCLVAVALX",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.0247955322265625
+          },
+          {
+            "sequence": "MAKLL123ILTCLVAVAL",
+            "is_valid": false,
+            "num_errors": 1,
+            "num_warnings": 0,
+            "validation_time_ms": 0.03695487976074219
+          },
+          {
+            "sequence": "MMMMM",
+            "is_valid": false,
+            "num_errors": 1,
+            "num_warnings": 1,
+            "validation_time_ms": 0.010728836059570312
+          },
+          {
+            "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 999,
+            "validation_time_ms": 1.7457008361816406
+          }
+        ],
+        "average_time_ms": 0.37245750427246094,
+        "pass_rate": 0.6
+      },
+      "moderate": {
+        "validation_level": "moderate",
+        "results": [
+          {
+            "sequence": "MAKLLILTCLVAVAL",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.05125999450683594
+          },
+          {
+            "sequence": "MAKLLILTCLVAVALX",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.022172927856445312
+          },
+          {
+            "sequence": "MAKLL123ILTCLVAVAL",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 1,
+            "validation_time_ms": 0.03314018249511719
+          },
+          {
+            "sequence": "MMMMM",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 2,
+            "validation_time_ms": 0.010013580322265625
+          },
+          {
+            "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 999,
+            "validation_time_ms": 1.7108917236328125
+          }
+        ],
+        "average_time_ms": 0.3654956817626953,
+        "pass_rate": 1.0
+      },
+      "permissive": {
+        "validation_level": "permissive",
+        "results": [
+          {
+            "sequence": "MAKLLILTCLVAVAL",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.04839897155761719
+          },
+          {
+            "sequence": "MAKLLILTCLVAVALX",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 0,
+            "validation_time_ms": 0.022411346435546875
+          },
+          {
+            "sequence": "MAKLL123ILTCLVAVAL",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 1,
+            "validation_time_ms": 0.05984306335449219
+          },
+          {
+            "sequence": "MMMMM",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 2,
+            "validation_time_ms": 0.022172927856445312
+          },
+          {
+            "sequence": "MMMMMMMMMMMMMMMMMMMM...",
+            "is_valid": true,
+            "num_errors": 0,
+            "num_warnings": 999,
+            "validation_time_ms": 1.6436576843261719
+          }
+        ],
+        "average_time_ms": 0.3592967987060547,
+        "pass_rate": 1.0
+      }
+    }
+  }
+}

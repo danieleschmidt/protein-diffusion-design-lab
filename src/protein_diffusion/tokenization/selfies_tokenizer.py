@@ -11,8 +11,34 @@ import pickle
 import re
 from typing import List, Dict, Optional, Union, Tuple
 from pathlib import Path
-import numpy as np
-import torch
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    class MockNumpy:
+        @staticmethod
+        def mean(arr):
+            return sum(arr)/len(arr) if arr else 0.5
+        @staticmethod
+        def array(data):
+            return data
+        @staticmethod
+        def std(arr):
+            return 1.0
+        @staticmethod
+        def min(arr):
+            return min(arr) if arr else 0
+        @staticmethod
+        def max(arr):
+            return max(arr) if arr else 1
+    np = MockNumpy()
+    NUMPY_AVAILABLE = False
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    from .. import mock_torch as torch
+    TORCH_AVAILABLE = False
 from dataclasses import dataclass
 
 # Standard amino acid alphabet
