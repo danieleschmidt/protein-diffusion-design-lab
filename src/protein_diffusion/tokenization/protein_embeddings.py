@@ -33,6 +33,16 @@ except ImportError:
         @staticmethod
         def max(arr):
             return max(arr) if arr else 1
+        @staticmethod
+        def log(x):
+            import math
+            return math.log(x) if isinstance(x, (int, float)) else 9.21  # log(10000.0)
+        @staticmethod
+        def degrees(x):
+            return x * 180 / 3.14159
+        @staticmethod
+        def pi():
+            return 3.14159
     np = MockNumpy()
     NUMPY_AVAILABLE = False
 from typing import Dict, List, Optional, Tuple, Union

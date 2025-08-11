@@ -10,7 +10,18 @@ try:
     import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
+    class MockRandom:
+        @staticmethod
+        def normal(mean=0, std=1, size=None):
+            import random
+            if size:
+                return [random.gauss(mean, std) for _ in range(size)]
+            return random.gauss(mean, std)
+    
     class MockNumpy:
+        random = MockRandom()
+        ndarray = list  # Mock ndarray as list
+        
         @staticmethod
         def mean(arr):
             return sum(arr)/len(arr) if arr else 0.5
@@ -472,10 +483,13 @@ class AffinityRanker:
             for key, value in result.items():
                 if isinstance(value, (str, int, float, bool, type(None))):
                     serializable_result[key] = value
-                elif isinstance(value, torch.Tensor):
-                    serializable_result[key] = value.tolist()
-                elif isinstance(value, np.ndarray):
-                    serializable_result[key] = value.tolist()
+                elif hasattr(value, 'tolist'):
+                    try:
+                        serializable_result[key] = value.tolist()
+                    except:
+                        serializable_result[key] = str(value)
+                elif isinstance(value, (list, tuple)):
+                    serializable_result[key] = list(value)
                 else:
                     serializable_result[key] = str(value)
             serializable_results.append(serializable_result)

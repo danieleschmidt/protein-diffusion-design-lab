@@ -205,6 +205,22 @@ class StructureQualityMetrics:
         return max(0.0, 1.0 - normalized_rg / 10.0)  # Convert to 0-1 score
 
 
+class MockStructurePredictor:
+    """Mock structure predictor when ESM is not available."""
+    
+    def __init__(self, config):
+        self.config = config
+    
+    def predict(self, sequence: str):
+        """Mock structure prediction."""
+        return {
+            "pdb_string": f"ATOM      1  CA  ALA A   1      0.000   0.000   0.000  1.00  0.50           C  \n",
+            "confidence": 0.7,
+            "plddt_scores": [0.7] * len(sequence),
+            "coordinates": [[0, 0, 0]] * len(sequence),
+        }
+
+
 class ESMFoldPredictor:
     """ESMFold-based structure prediction."""
     
@@ -332,7 +348,11 @@ class StructurePredictor:
         
         # Initialize predictor based on method
         if config.method == "esmfold":
-            self.predictor = ESMFoldPredictor(config)
+            if ESM_FOLD_AVAILABLE:
+                self.predictor = ESMFoldPredictor(config)
+            else:
+                logger.warning("ESM not available, using mock structure predictor")
+                self.predictor = MockStructurePredictor(config)
         elif config.method == "colabfold":
             self.predictor = ColabFoldPredictor(config)
         else:

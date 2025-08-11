@@ -50,7 +50,27 @@ class ValidationLevel(Enum):
     """Validation strictness levels."""
     STRICT = "strict"
     MODERATE = "moderate"
-    PERMISSIVE = "permissive"
+    LENIENT = "lenient"
+
+
+class ProteinValidationError(ValueError):
+    """Base exception for protein validation errors."""
+    pass
+
+
+class SequenceValidationError(ProteinValidationError):
+    """Exception for sequence validation errors."""
+    pass
+
+
+class ModelValidationError(ProteinValidationError):
+    """Exception for model validation errors."""
+    pass
+
+
+class SystemValidationError(ProteinValidationError):
+    """Exception for system/environment validation errors."""
+    pass
 
 class ValidationError(Exception):
     """Custom exception for validation errors."""
