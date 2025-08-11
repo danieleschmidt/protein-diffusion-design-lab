@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-08-11T08:40:12.755686",
+  "config": {
+    "binding_weight": 0.4,
+    "structure_weight": 0.3,
+    "diversity_weight": 0.2,
+    "novelty_weight": 0.1,
+    "min_confidence": 0.7,
+    "min_structure_quality": 0.6,
+    "max_clash_score": 0.1,
+    "diversity_threshold": 0.8,
+    "sequence_similarity_threshold": 0.7,
+    "max_results": 100,
+    "save_rankings": true,
+    "output_dir": "./rankings"
+  },
+  "total_sequences": 0,
+  "results": []
+}

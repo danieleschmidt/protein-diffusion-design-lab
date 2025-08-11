@@ -51,8 +51,74 @@ class MockTensor:
     def __getitem__(self, key):
         return MockTensor(0.5)
     
+    def __setitem__(self, key, value):
+        pass  # Mock assignment
+    
     def any(self):
         return MockTensor(True)
+    
+    def repeat(self, *sizes):
+        return self
+    
+    def expand(self, *sizes):
+        return self
+    
+    def transpose(self, dim0, dim1):
+        return self
+    
+    def contiguous(self):
+        return self
+    
+    def view(self, *shape):
+        return self
+    
+    def flatten(self):
+        return self
+    
+    def squeeze(self, dim=None):
+        return self
+    
+    def type_as(self, other):
+        return self
+    
+    def float(self):
+        return self
+    
+    def long(self):
+        return self
+    
+    def int(self):
+        return self
+    
+    def __mul__(self, other):
+        return self
+    
+    def __add__(self, other):
+        return self
+    
+    def __sub__(self, other):
+        return self
+    
+    def __truediv__(self, other):
+        return self
+    
+    def __rtruediv__(self, other):
+        return MockTensor(0.5)
+    
+    def __pow__(self, other):
+        return self
+    
+    def __rpow__(self, other):
+        return MockTensor(1.0)
+    
+    def __rsub__(self, other):
+        return MockTensor(0.5)
+    
+    def __rmul__(self, other):
+        return self
+    
+    def __radd__(self, other):
+        return self
     
     @property
     def device(self):
@@ -64,14 +130,85 @@ def tensor(data, dtype=None):
 def zeros(*shape, dtype=None):
     return MockTensor([0.0] * shape[0] if shape else 0.0, dtype)
 
-def randn(*shape, dtype=None):
-    return MockTensor([random.gauss(0, 1) for _ in range(shape[0])] if shape else random.gauss(0, 1), dtype)
+def randn(*shape, dtype=None, device=None):
+    if len(shape) == 1:
+        return MockTensor([random.gauss(0, 1) for _ in range(shape[0])], dtype)
+    elif len(shape) == 2:
+        return MockTensor([[random.gauss(0, 1) for _ in range(shape[1])] for _ in range(shape[0])], dtype)
+    elif len(shape) == 3:
+        return MockTensor([[[random.gauss(0, 1) for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])], dtype)
+    return MockTensor(random.gauss(0, 1), dtype)
 
 def isnan(input):
     return MockTensor(False)
 
 def isinf(input):
     return MockTensor(False)
+
+def arange(start, end=None, step=1, dtype=None):
+    if end is None:
+        end = start
+        start = 0
+    return MockTensor(list(range(int(start), int(end), int(step))), dtype)
+
+def linspace(start, end, steps):
+    if steps == 1:
+        return MockTensor([start])
+    step = (end - start) / (steps - 1)
+    return MockTensor([start + i * step for i in range(steps)])
+
+def randint(low, high, size, device=None, dtype=None):
+    if isinstance(size, tuple):
+        return MockTensor([random.randint(low, high-1) for _ in range(size[0])], dtype)
+    return MockTensor([random.randint(low, high-1) for _ in range(size)], dtype)
+
+def full(size, fill_value, device=None, dtype=None):
+    if isinstance(size, tuple):
+        return MockTensor([fill_value] * size[0], dtype)
+    return MockTensor([fill_value] * size, dtype)
+
+def cat(tensors, dim=0):
+    return tensors[0] if tensors else MockTensor([])
+
+def matmul(tensor1, tensor2):
+    return MockTensor([[0.5] * 10] * 10)
+
+def outer(tensor1, tensor2):
+    return MockTensor([[0.5] * 10] * 10)
+
+def sqrt(input):
+    return input
+
+def exp(input):
+    return input
+
+def cos(input):
+    return input
+
+def sin(input):
+    return input
+
+def clamp(input, min_val=None, max_val=None):
+    return input
+
+def cumprod(input, dim):
+    return input
+
+def ones(*shape, dtype=None):
+    if len(shape) == 1:
+        return MockTensor([1.0] * shape[0], dtype)
+    elif len(shape) == 2:
+        return MockTensor([[1.0] * shape[1]] * shape[0], dtype)
+    return MockTensor(1.0, dtype)
+
+class MockFinfo:
+    def __init__(self, dtype):
+        self.dtype = dtype
+        self.min = -1e10
+        self.max = 1e10
+
+def finfo(dtype):
+    return MockFinfo(dtype)
 
 class MockDevice:
     def __init__(self, device_str):
@@ -100,7 +237,10 @@ class MockDtype:
 
 float16 = MockDtype("float16")
 float32 = MockDtype("float32")
+float = MockDtype("float")
 long = MockDtype("long")
+int64 = MockDtype("int64")
+bool = MockDtype("bool")
 
 class MockModule:
     def __init__(self):
@@ -119,6 +259,18 @@ class MockModule:
     def eval(self):
         self.training = False
         return self
+    
+    def register_buffer(self, name, tensor):
+        setattr(self, name, tensor)
+    
+    def apply(self, fn):
+        return self
+    
+    def state_dict(self):
+        return {}
+    
+    def load_state_dict(self, state_dict):
+        pass
 
 class MockLinear(MockModule):
     def __init__(self, in_features, out_features, bias=True):
@@ -179,6 +331,18 @@ class MockF:
     
     @staticmethod
     def gelu(input):
+        return input
+    
+    @staticmethod
+    def relu(input):
+        return input
+    
+    @staticmethod
+    def silu(input):
+        return input
+    
+    @staticmethod
+    def pad(input, pad, mode='constant', value=0):
         return input
 
 F = MockF()

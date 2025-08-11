@@ -13,7 +13,7 @@ except ImportError:
     from . import mock_torch as torch
     nn = torch.nn
     TORCH_AVAILABLE = False
-from typing import List, Optional, Dict, Union, Tuple
+from typing import List, Optional, Dict, Union, Tuple, Any
 from pathlib import Path
 try:
     import numpy as np
@@ -46,18 +46,42 @@ except ImportError:
 from dataclasses import dataclass
 import logging
 import warnings
+import time
+import hashlib
+import json
 
 from .models import DiffusionTransformer, DDPM, DiffusionTransformerConfig, DDPMConfig
 from .tokenization.selfies_tokenizer import SELFIESTokenizer, TokenizerConfig
 from .tokenization.protein_embeddings import ProteinEmbeddings, EmbeddingConfig
 from .folding.structure_predictor import StructurePredictor, StructurePredictorConfig
 try:
-    from .validation import ValidationError as ProteinValidationError, ValidationManager
+    from .cache import CacheManager, CacheConfig  
+    from .performance import PerformanceBatchProcessor, PerformanceConfig
+    from .scaling import LoadBalancer, ScalingConfig
+    OPTIMIZATION_AVAILABLE = True
+except ImportError:
+    OPTIMIZATION_AVAILABLE = False
+    CacheManager = None
+    CacheConfig = None
+    PerformanceBatchProcessor = None 
+    PerformanceConfig = None
+    LoadBalancer = None
+    ScalingConfig = None
+try:
+    from .validation import (
+        ProteinValidationError, SequenceValidationError, 
+        ModelValidationError, SystemValidationError, ValidationManager
+    )
     from .security import SecurityManager, SecurityConfig
+    VALIDATION_AVAILABLE = True
     SECURITY_AVAILABLE = True
 except ImportError:
+    VALIDATION_AVAILABLE = False
     SECURITY_AVAILABLE = False
     ProteinValidationError = ValueError
+    SequenceValidationError = ValueError
+    ModelValidationError = ValueError
+    SystemValidationError = ValueError
     ValidationManager = None
     SecurityManager = None
     SecurityConfig = None
@@ -87,6 +111,14 @@ class ProteinDiffuserConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     dtype: torch.dtype = torch.float16
     
+    # Performance optimization
+    enable_caching: bool = True
+    cache_config: CacheConfig = None
+    enable_batch_processing: bool = True
+    performance_config: PerformanceConfig = None
+    enable_auto_scaling: bool = False
+    scaling_config: ScalingConfig = None
+    
     def __post_init__(self):
         if self.model_config is None:
             self.model_config = DiffusionTransformerConfig()
@@ -98,6 +130,15 @@ class ProteinDiffuserConfig:
             self.embedding_config = EmbeddingConfig()
         if self.structure_config is None:
             self.structure_config = StructurePredictorConfig()
+            
+        # Initialize performance configs if available
+        if OPTIMIZATION_AVAILABLE:
+            if self.cache_config is None and self.enable_caching:
+                self.cache_config = CacheConfig()
+            if self.performance_config is None and self.enable_batch_processing:
+                self.performance_config = PerformanceConfig()
+            if self.scaling_config is None and self.enable_auto_scaling:
+                self.scaling_config = ScalingConfig()
 
 
 class ProteinDiffuser:
@@ -155,6 +196,25 @@ class ProteinDiffuser:
         # Set to evaluation mode
         self.model.eval()
         self.embeddings.eval()
+        
+        # Initialize performance components
+        if OPTIMIZATION_AVAILABLE and config.enable_caching:
+            self.cache_manager = CacheManager(config.cache_config)
+            logger.info("Cache manager initialized")
+        else:
+            self.cache_manager = None
+            
+        if OPTIMIZATION_AVAILABLE and config.enable_batch_processing:
+            self.batch_processor = PerformanceBatchProcessor(config.performance_config)
+            logger.info("Batch processor initialized")
+        else:
+            self.batch_processor = None
+            
+        if OPTIMIZATION_AVAILABLE and config.enable_auto_scaling:
+            self.load_balancer = LoadBalancer(config.scaling_config)
+            logger.info("Load balancer initialized")
+        else:
+            self.load_balancer = None
     
     @classmethod
     def from_pretrained(
@@ -249,25 +309,43 @@ class ProteinDiffuser:
             List of generated protein scaffolds with metadata
         """
         try:
-            # Input validation and sanitization
-            if SECURITY_AVAILABLE:
+            # Enhanced input validation and sanitization
+            if VALIDATION_AVAILABLE:
                 validation_manager = ValidationManager()
                 generation_params = {
                     'num_samples': num_samples or self.config.num_samples,
                     'max_length': max_length or self.config.max_length,
                     'temperature': temperature or self.config.temperature,
                     'guidance_scale': guidance_scale or self.config.guidance_scale,
+                    'motif': motif,
+                    'sampling_method': sampling_method,
+                    'client_id': client_id,
                 }
-                validation_result = validation_manager.comprehensive_validation(
-                    generation_params=generation_params
-                )
                 
-                if not validation_result.is_valid:
-                    raise ProteinValidationError(f"Validation failed: {validation_result.errors}")
-                
-                if validation_result.warnings:
-                    for warning in validation_result.warnings:
-                        logger.warning(f"Generation warning: {warning}")
+                try:
+                    validation_result = validation_manager.comprehensive_validation(
+                        generation_params=generation_params
+                    )
+                    
+                    if not validation_result.is_valid:
+                        raise ProteinValidationError(f"Validation failed: {validation_result.errors}")
+                    
+                    if validation_result.warnings:
+                        for warning in validation_result.warnings:
+                            logger.warning(f"Generation warning: {warning}")
+                            
+                except Exception as validation_error:
+                    logger.error(f"Validation system error: {validation_error}")
+                    # Continue with basic validation as fallback
+                    if not isinstance(motif, (str, type(None))):
+                        raise SequenceValidationError(f"Invalid motif type: {type(motif)}")
+            else:
+                # Fallback validation when validation system not available
+                logger.warning("Validation system not available, using basic checks")
+                if motif and not isinstance(motif, str):
+                    raise SequenceValidationError(f"Invalid motif type: {type(motif)}")
+                if not isinstance(client_id, str):
+                    client_id = "default"
             
             # Use config defaults if not specified
             if num_samples is None:
@@ -370,15 +448,35 @@ class ProteinDiffuser:
                             continue
                     
                     if not results:
-                        raise RuntimeError("No valid sequences generated")
+                        logger.error("No valid sequences generated - returning error response")
+                        return [{
+                            "error": "Generation failed to produce valid sequences",
+                            "sequence": "",
+                            "confidence": 0.0,
+                            "length": 0,
+                            "sample_id": -1,
+                            "generation_params": {
+                                "temperature": temperature,
+                                "guidance_scale": guidance_scale,
+                                "sampling_method": sampling_method,
+                            }
+                        }]
                     
-                    logger.info(f"Generated {len(results)} sequences with average length {np.mean([r['length'] for r in results]):.1f}")
+                    avg_length = np.mean([r['length'] for r in results]) if results else 0
+                    logger.info(f"Successfully generated {len(results)} sequences with average length {avg_length:.1f}")
+                    
+                    # Add success metadata
+                    for result in results:
+                        result["generation_success"] = True
+                        result["generation_timestamp"] = time.time()
                     
                     return results
                 
-                except torch.cuda.OutOfMemoryError:
-                    logger.error("GPU out of memory during generation")
-                    raise RuntimeError("Insufficient GPU memory for generation")
+                except Exception as cuda_error:
+                    if TORCH_AVAILABLE and "CUDA out of memory" in str(cuda_error):
+                        logger.error("GPU out of memory during generation")
+                        raise RuntimeError("Insufficient GPU memory for generation")
+                    raise cuda_error
                 except Exception as e:
                     logger.error(f"Error during sample generation: {e}")
                     raise
@@ -591,3 +689,203 @@ class ProteinDiffuser:
             "device": str(self.device),
             "dtype": str(self.config.dtype),
         }
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Comprehensive health check of the system components.
+        
+        Returns:
+            Dictionary with health status of various components
+        """
+        health_status = {
+            "timestamp": time.time(),
+            "overall_status": "healthy",
+            "components": {},
+            "warnings": [],
+            "errors": []
+        }
+        
+        try:
+            # Check model status
+            health_status["components"]["model"] = {
+                "status": "healthy" if self.model else "error",
+                "loaded": self.model is not None,
+                "device": str(self.device),
+                "parameters": self.model.get_num_parameters() if self.model else 0
+            }
+            
+            # Check tokenizer status
+            health_status["components"]["tokenizer"] = {
+                "status": "healthy" if self.tokenizer else "error", 
+                "loaded": self.tokenizer is not None,
+                "vocab_size": len(self.tokenizer) if self.tokenizer else 0
+            }
+            
+            # Check dependencies
+            health_status["components"]["dependencies"] = {
+                "torch_available": TORCH_AVAILABLE,
+                "numpy_available": NUMPY_AVAILABLE,
+                "validation_available": VALIDATION_AVAILABLE,
+                "security_available": SECURITY_AVAILABLE,
+            }
+            
+            # Quick generation test (if requested)
+            try:
+                test_result = self.generate(
+                    motif=None, 
+                    num_samples=1, 
+                    max_length=10, 
+                    progress=False
+                )
+                health_status["components"]["generation"] = {
+                    "status": "healthy" if test_result and not test_result[0].get("error") else "warning",
+                    "test_completed": True,
+                    "test_result": "success" if test_result and not test_result[0].get("error") else "failed"
+                }
+            except Exception as e:
+                health_status["components"]["generation"] = {
+                    "status": "error",
+                    "test_completed": False,
+                    "error": str(e)
+                }
+                health_status["errors"].append(f"Generation test failed: {e}")
+            
+            # Check for warnings
+            if not TORCH_AVAILABLE:
+                health_status["warnings"].append("PyTorch not available - using mock implementation")
+            if not VALIDATION_AVAILABLE:
+                health_status["warnings"].append("Validation system not available")
+            if not SECURITY_AVAILABLE:
+                health_status["warnings"].append("Security system not available")
+            
+            # Determine overall status
+            component_statuses = [comp.get("status", "unknown") for comp in health_status["components"].values()]
+            if any(status == "error" for status in component_statuses):
+                health_status["overall_status"] = "unhealthy"
+            elif any(status == "warning" for status in component_statuses) or health_status["warnings"]:
+                health_status["overall_status"] = "degraded"
+                
+        except Exception as e:
+            health_status["overall_status"] = "error"
+            health_status["errors"].append(f"Health check failed: {e}")
+            logger.error(f"Health check error: {e}")
+        
+        return health_status
+    
+    def generate_batch(
+        self,
+        requests: List[Dict[str, Any]],
+        max_batch_size: Optional[int] = None,
+        enable_caching: bool = True,
+        progress: bool = True,
+    ) -> List[List[Dict[str, Any]]]:
+        """
+        High-performance batch generation with optimization.
+        
+        Args:
+            requests: List of generation request dictionaries
+            max_batch_size: Maximum batch size for processing
+            enable_caching: Whether to use caching
+            progress: Show progress bar
+            
+        Returns:
+            List of generation results for each request
+        """
+        if not requests:
+            return []
+            
+        logger.info(f"Processing batch of {len(requests)} generation requests")
+        
+        # Use performance optimizations if available
+        if self.batch_processor and self.config.enable_batch_processing:
+            try:
+                return self.batch_processor.process_batch(
+                    requests, 
+                    self._single_generation_fn,
+                    max_batch_size=max_batch_size,
+                    progress=progress
+                )
+            except Exception as e:
+                logger.warning(f"Batch processor failed, falling back to sequential: {e}")
+        
+        # Fallback to sequential processing
+        results = []
+        for i, request in enumerate(requests):
+            if progress:
+                logger.info(f"Processing request {i+1}/{len(requests)}")
+            
+            try:
+                # Check cache first
+                cache_key = None
+                if enable_caching and self.cache_manager:
+                    cache_key = self._generate_cache_key(request)
+                    cached_result = self.cache_manager.get(cache_key)
+                    if cached_result:
+                        logger.debug(f"Cache hit for request {i}")
+                        results.append(cached_result)
+                        continue
+                
+                # Generate if not cached
+                result = self.generate(**request)
+                
+                # Store in cache
+                if cache_key and self.cache_manager:
+                    self.cache_manager.set(cache_key, result)
+                
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"Failed to process request {i}: {e}")
+                results.append([{
+                    "error": str(e),
+                    "sequence": "",
+                    "confidence": 0.0,
+                    "length": 0,
+                    "sample_id": -1,
+                    "request_id": i,
+                }])
+        
+        logger.info(f"Completed batch processing: {len(results)} results")
+        return results
+    
+    def _single_generation_fn(self, request: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Single generation function for batch processing."""
+        return self.generate(**request)
+    
+    def _generate_cache_key(self, request: Dict[str, Any]) -> str:
+        """Generate cache key from request parameters."""
+        import hashlib
+        import json
+        
+        # Create deterministic key from request parameters
+        key_data = {
+            'motif': request.get('motif'),
+            'num_samples': request.get('num_samples'),
+            'max_length': request.get('max_length'),
+            'temperature': request.get('temperature'),
+            'sampling_method': request.get('sampling_method'),
+            'guidance_scale': request.get('guidance_scale'),
+        }
+        
+        key_str = json.dumps(key_data, sort_keys=True)
+        return hashlib.md5(key_str.encode()).hexdigest()
+    
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get performance statistics from all components."""
+        stats = {
+            "timestamp": time.time(),
+            "cache_stats": None,
+            "batch_stats": None,
+            "scaling_stats": None,
+        }
+        
+        if self.cache_manager:
+            stats["cache_stats"] = self.cache_manager.get_stats()
+            
+        if self.batch_processor:
+            stats["batch_stats"] = self.batch_processor.get_stats()
+            
+        if self.load_balancer:
+            stats["scaling_stats"] = self.load_balancer.get_stats()
+        
+        return stats
