@@ -330,7 +330,19 @@ class ProteinEmbeddings(nn.Module):
         else:
             # Use token embeddings as fallback
             if token_ids is None:
-                raise ValueError("token_ids required when ESM is not available")
+                # Simple tokenization: convert amino acids to indices
+                # A=1, C=2, D=3, etc. (0 reserved for padding/unknown)
+                aa_to_idx = {aa: i+1 for i, aa in enumerate("ACDEFGHIKLMNPQRSTVWY")}
+                token_ids = []
+                for seq in sequences:
+                    seq_tokens = [aa_to_idx.get(aa, 0) for aa in seq]
+                    # Pad to max length
+                    while len(seq_tokens) < self.config.max_length:
+                        seq_tokens.append(0)
+                    # Truncate if too long
+                    seq_tokens = seq_tokens[:self.config.max_length]
+                    token_ids.append(seq_tokens)
+                token_ids = torch.tensor(token_ids, dtype=torch.long)
             seq_embeddings = self.token_embedding(token_ids)
         
         # Add positional encoding

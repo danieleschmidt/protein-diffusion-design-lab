@@ -482,15 +482,32 @@ class ProteinDiffuser:
                     raise
         
         except Exception as e:
-            logger.error(f"Generation failed: {e}")
-            # Return empty list with error information instead of crashing
-            return [{
-                "error": str(e),
-                "sequence": "",
-                "confidence": 0.0,
-                "length": 0,
-                "sample_id": -1,
-            }]
+            logger.error(f"Generation failed: {e}", exc_info=True)
+            # Return structured error results with comprehensive debugging info
+            error_results = []
+            for i in range(num_samples or 1):
+                error_results.append({
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "sequence": "",
+                    "confidence": 0.0,
+                    "length": 0,
+                    "sample_id": i,
+                    "generation_params": {
+                        "motif": motif,
+                        "num_samples": num_samples,
+                        "max_length": max_length,
+                        "temperature": temperature,
+                        "guidance_scale": guidance_scale,
+                        "sampling_method": sampling_method,
+                    },
+                    "system_info": {
+                        "torch_available": TORCH_AVAILABLE,
+                        "device": str(self.device),
+                        "timestamp": time.time(),
+                    }
+                })
+            return error_results
     
     def _encode_motif(self, motif: str, batch_size: int, max_length: int) -> torch.Tensor:
         """

@@ -11,8 +11,14 @@ class MockTensor:
         self.dtype = dtype
         if isinstance(data, list):
             if data and isinstance(data[0], list):
-                self._shape = (len(data), len(data[0]))
+                if data[0] and isinstance(data[0][0], list):
+                    # 3D tensor
+                    self._shape = (len(data), len(data[0]), len(data[0][0]))
+                else:
+                    # 2D tensor
+                    self._shape = (len(data), len(data[0]) if data[0] else 0)
             else:
+                # 1D tensor
                 self._shape = (len(data),)
         else:
             self._shape = ()
@@ -271,6 +277,12 @@ class MockModule:
     
     def load_state_dict(self, state_dict):
         pass
+    
+    def __call__(self, *args, **kwargs):
+        """Mock callable behavior - routes to forward method if it exists."""
+        if hasattr(self, 'forward'):
+            return self.forward(*args, **kwargs)
+        return MockTensor([0.5] * 10)
 
 class MockLinear(MockModule):
     def __init__(self, in_features, out_features, bias=True):
@@ -288,7 +300,13 @@ class MockEmbedding(MockModule):
         self.embedding_dim = embedding_dim
     
     def __call__(self, input):
-        return MockTensor([[0.5] * self.embedding_dim] * 10)
+        # Return tensor with shape [batch_size, seq_len, embedding_dim]
+        if hasattr(input, 'shape') and len(input.shape) >= 2:
+            batch_size, seq_len = input.shape[0], input.shape[1]
+        else:
+            batch_size, seq_len = 1, 10  # Default fallback
+        
+        return MockTensor([[[0.5] * self.embedding_dim for _ in range(seq_len)] for _ in range(batch_size)])
 
 class MockNN:
     Module = MockModule

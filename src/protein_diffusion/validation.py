@@ -334,7 +334,9 @@ class InputValidator:
         num_samples: int,
         max_length: int,
         temperature: float,
-        guidance_scale: float
+        guidance_scale: float,
+        motif: Optional[str] = None,
+        **kwargs
     ) -> ValidationResult:
         """Validate generation parameters."""
         result = ValidationResult(is_valid=True, errors=[], warnings=[])
@@ -358,6 +360,15 @@ class InputValidator:
             result.add_error(f"guidance_scale must be >= 1.0, got {guidance_scale}")
         elif guidance_scale > 20.0:
             result.add_warning(f"Very high guidance_scale: {guidance_scale}")
+        
+        # Validate motif if provided
+        if motif is not None:
+            if not isinstance(motif, str):
+                result.add_error(f"motif must be string, got {type(motif)}")
+            elif len(motif) == 0:
+                result.add_error("motif cannot be empty")
+            elif len(motif) > 100:
+                result.add_warning(f"Very long motif: {len(motif)} characters")
         
         return result
     
@@ -410,12 +421,14 @@ class SystemValidator:
         result = ValidationResult(is_valid=True, errors=[], warnings=[])
         
         # Check PyTorch installation
-        try:
-            import torch
-            if not torch.__version__:
-                result.add_error("PyTorch version not available")
-        except ImportError:
-            result.add_error("PyTorch not installed")
+        if TORCH_AVAILABLE:
+            try:
+                if not hasattr(torch, '__version__'):
+                    result.add_warning("PyTorch version not available (using mock)")
+            except Exception:
+                result.add_warning("PyTorch version check failed")
+        else:
+            result.add_warning("PyTorch not available, using mock implementation")
         
         # Check CUDA availability
         if torch.cuda.is_available():
