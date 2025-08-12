@@ -1,0 +1,47 @@
+{
+  "model_optimization": {
+    "optimizations_applied": [
+      "embeddings_eval_mode"
+    ],
+    "performance_gains": {},
+    "memory_savings": {}
+  },
+  "caching": {
+    "cache_layers": [],
+    "estimated_hit_rate": 0.0,
+    "memory_allocated": 0,
+    "available": false
+  },
+  "scaling": {
+    "policies_configured": [],
+    "scaling_triggers": {},
+    "resource_limits": {
+      "max_cpu_percent": 85,
+      "max_memory_mb": 8192,
+      "max_concurrent_requests": 50
+    },
+    "available": true
+  },
+  "benchmarks": {
+    "baseline_performance": {},
+    "optimized_performance": {
+      "small": {
+        "duration_seconds": 0.012364864349365234,
+        "throughput_samples_per_second": 80.87432031159616,
+        "success": true
+      },
+      "medium": {
+        "duration_seconds": 0.0075342655181884766,
+        "throughput_samples_per_second": 265.4538780418341,
+        "success": true
+      },
+      "large": {
+        "duration_seconds": 0.009095907211303711,
+        "throughput_samples_per_second": 109.93955597494168,
+        "success": true
+      }
+    },
+    "improvement_metrics": {}
+  },
+  "optimization_report": "# PROTEIN DIFFUSION OPTIMIZATION REPORT\\nGenerated: 2025-08-12 21:30:55\\nTotal optimization time: 0.03 seconds\\n\\n## OPTIMIZATIONS APPLIED\\n\u2713 Embeddings Eval Mode\\n\\n## CACHING CONFIGURATION\\nCache layers configured: 0\\nEstimated hit rate: 0.0%\\nMemory allocated: 0.0 MB\\n\\n## AUTO-SCALING CONFIGURATION\\nScaling policies: \\nResource limits: {'max_cpu_percent': 85, 'max_memory_mb': 8192, 'max_concurrent_requests': 50}\\n\\n## PERFORMANCE BENCHMARKS\\n\u2022 small: 0.01s (80.87 samples/s)\\n\u2022 medium: 0.01s (265.45 samples/s)\\n\u2022 large: 0.01s (109.94 samples/s)\\n\\n## SYSTEM HEALTH\\nOverall status: WARNING\\nHealth checks: {'healthy': 2, 'warning': 10, 'critical': 0, 'total': 12}\\n\\n## RECOMMENDATIONS\\n\u2022 Consider installing torch for enhanced functionality\\n\u2022 Consider installing plotly for enhanced functionality\\n\u2022 Monitor gpu usage - approaching limits\\n\u2022 Monitor memory usage - approaching limits\\n\u2022 Consider installing numpy for enhanced functionality"
+}

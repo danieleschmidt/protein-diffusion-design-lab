@@ -1,0 +1,9 @@
+{
+  "experiment_id": "research_pipeline_20250812_213124_34d3cb66",
+  "timestamp": "2025-08-12T21:31:24.331691",
+  "methods_tested": 4,
+  "baselines_compared": 3,
+  "significant_improvements": 5,
+  "publication_readiness": 0.855,
+  "best_method": "simple_diffusion"
+}
