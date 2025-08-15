@@ -1,0 +1,12 @@
+{
+  "test_key": {
+    "timestamp": 1755300545.6604865,
+    "ttl": 3600.0,
+    "size_bytes": 29,
+    "original_size": 29,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.660492
+  }
+}
