@@ -1,0 +1,72 @@
+{
+  "test_protein_1": {
+    "timestamp": 1755300545.86612,
+    "ttl": 3600.0,
+    "size_bytes": 69,
+    "original_size": 69,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.866125
+  },
+  "protein_0": {
+    "timestamp": 1755300545.8663847,
+    "ttl": 3600.0,
+    "size_bytes": 47,
+    "original_size": 47,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.8663864
+  },
+  "protein_1": {
+    "timestamp": 1755300545.8667433,
+    "ttl": 3600.0,
+    "size_bytes": 47,
+    "original_size": 47,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.8667462
+  },
+  "protein_2": {
+    "timestamp": 1755300545.867499,
+    "ttl": 3600.0,
+    "size_bytes": 47,
+    "original_size": 47,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.867503
+  },
+  "protein_3": {
+    "timestamp": 1755300545.867936,
+    "ttl": 3600.0,
+    "size_bytes": 47,
+    "original_size": 47,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.8679388
+  },
+  "protein_4": {
+    "timestamp": 1755300545.8684385,
+    "ttl": 3600.0,
+    "size_bytes": 47,
+    "original_size": 47,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.8684413
+  },
+  "__main__.expensive_computation:c166e199753b8b1f1c9de2c6f611b497": {
+    "timestamp": 1755300545.8793256,
+    "ttl": 60.0,
+    "size_bytes": 5,
+    "original_size": 5,
+    "compressed": false,
+    "compression_type": "none",
+    "access_count": 0,
+    "last_access": 1755300545.8793306
+  }
+}
