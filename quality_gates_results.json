@@ -1,0 +1,68 @@
+{
+  "timestamp": 1755518392.8842535,
+  "total_gates": 13,
+  "passed": 0,
+  "failed": 5,
+  "skipped": 8,
+  "required_failed": 5,
+  "optional_failed": 0,
+  "total_execution_time": 0.2399137020111084,
+  "gates": {
+    "security_scan": {
+      "name": "security_scan",
+      "description": "Security vulnerability scan with bandit",
+      "required": true,
+      "passed": false,
+      "execution_time": 0.0023763179779052734,
+      "exit_code": 127,
+      "output_length": 0,
+      "error_output_length": 60,
+      "has_error": true
+    },
+    "unit_tests": {
+      "name": "unit_tests",
+      "description": "Run unit tests",
+      "required": true,
+      "passed": false,
+      "execution_time": 0.002348184585571289,
+      "exit_code": 127,
+      "output_length": 0,
+      "error_output_length": 30,
+      "has_error": true
+    },
+    "integration_tests": {
+      "name": "integration_tests",
+      "description": "Run integration tests",
+      "required": true,
+      "passed": false,
+      "execution_time": 0.0019299983978271484,
+      "exit_code": 127,
+      "output_length": 0,
+      "error_output_length": 30,
+      "has_error": true
+    },
+    "system_health_check": {
+      "name": "system_health_check",
+      "description": "Comprehensive system health check",
+      "required": true,
+      "passed": false,
+      "execution_time": 0.1923511028289795,
+      "exit_code": null,
+      "output_length": 0,
+      "error_output_length": 0,
+      "has_error": false
+    },
+    "cli_functionality": {
+      "name": "cli_functionality",
+      "description": "Test CLI functionality",
+      "required": true,
+      "passed": false,
+      "execution_time": 0.03910994529724121,
+      "exit_code": null,
+      "output_length": 0,
+      "error_output_length": 0,
+      "has_error": false
+    }
+  },
+  "success": false
+}

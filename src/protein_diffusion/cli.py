@@ -353,6 +353,259 @@ def analyze_command(args) -> int:
         return 1
 
 
+def benchmark_command(args) -> int:
+    """Execute benchmark command to test system performance."""
+    print("🚀 Running system benchmarks...")
+    
+    try:
+        # Initialize components
+        config = ProteinDiffuserConfig()
+        config.num_samples = 5  # Small benchmark
+        config.max_length = 64
+        
+        diffuser = ProteinDiffuser(config)
+        ranker = AffinityRanker()
+        
+        # Test generation speed
+        import time
+        start_time = time.time()
+        
+        results = diffuser.generate(
+            motif="HELIX",
+            num_samples=5,
+            max_length=64,
+            progress=False
+        )
+        
+        gen_time = time.time() - start_time
+        
+        # Test ranking speed
+        start_time = time.time()
+        sequences = [r['sequence'] for r in results if 'sequence' in r]
+        ranked = ranker.rank(sequences[:3], return_detailed=False)  # Rank subset
+        rank_time = time.time() - start_time
+        
+        # Health check
+        health = diffuser.health_check()
+        
+        # Print results
+        print(f"\n📊 Benchmark Results:")
+        print(f"Generation time: {gen_time:.2f}s ({len(results)} sequences)")
+        print(f"Ranking time: {rank_time:.2f}s ({len(sequences)} sequences)")
+        print(f"System health: {health['overall_status']}")
+        
+        if health['warnings']:
+            print(f"⚠️  Warnings: {len(health['warnings'])}")
+        if health['errors']:
+            print(f"❌ Errors: {len(health['errors'])}")
+            
+        # Save benchmark results
+        if args.output:
+            output_dir = Path(args.output)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            benchmark_file = output_dir / "benchmark_results.json"
+            with open(benchmark_file, 'w') as f:
+                json.dump({
+                    "generation_time": gen_time,
+                    "ranking_time": rank_time,
+                    "sequences_generated": len(results),
+                    "sequences_ranked": len(sequences),
+                    "health_check": health,
+                    "system_info": {
+                        "torch_available": TORCH_AVAILABLE,
+                        "device": str(diffuser.device)
+                    }
+                }, f, indent=2)
+            print(f"📁 Benchmark results saved to {benchmark_file}")
+        
+        return 0 if health['overall_status'] in ['healthy', 'degraded'] else 1
+        
+    except Exception as e:
+        print(f"❌ Benchmark failed: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def validate_command(args) -> int:
+    """Execute validation command for input sequences."""
+    print(f"🔍 Validating sequences from {args.input}...")
+    
+    try:
+        # Load sequences
+        sequences = []
+        with open(args.input, 'r') as f:
+            content = f.read().strip()
+            if content.startswith('>'):
+                # FASTA format
+                lines = content.split('\n')
+                for line in lines:
+                    if not line.startswith('>') and line.strip():
+                        sequences.append(line.strip())
+            else:
+                sequences = [line.strip() for line in content.split('\n') if line.strip()]
+        
+        print(f"📊 Validating {len(sequences)} sequences...")
+        
+        valid_sequences = 0
+        issues = []
+        
+        for i, seq in enumerate(sequences):
+            # Basic validation
+            if not seq:
+                issues.append(f"Sequence {i+1}: Empty sequence")
+                continue
+                
+            if len(seq) < 5:
+                issues.append(f"Sequence {i+1}: Too short ({len(seq)} residues)")
+                continue
+                
+            # Check for valid amino acids
+            valid_aas = set('ACDEFGHIKLMNPQRSTVWY')
+            invalid_aas = [aa for aa in seq.upper() if aa not in valid_aas]
+            if invalid_aas:
+                issues.append(f"Sequence {i+1}: Invalid amino acids: {set(invalid_aas)}")
+                continue
+                
+            valid_sequences += 1
+        
+        # Print results
+        print(f"✅ Valid sequences: {valid_sequences}/{len(sequences)}")
+        if issues:
+            print(f"⚠️  Issues found: {len(issues)}")
+            if args.verbose:
+                for issue in issues[:10]:  # Show first 10 issues
+                    print(f"  • {issue}")
+                if len(issues) > 10:
+                    print(f"  ... and {len(issues) - 10} more issues")
+        
+        # Save validation report
+        if args.output:
+            output_dir = Path(args.output)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            report_file = output_dir / "validation_report.json"
+            with open(report_file, 'w') as f:
+                json.dump({
+                    "total_sequences": len(sequences),
+                    "valid_sequences": valid_sequences,
+                    "invalid_sequences": len(sequences) - valid_sequences,
+                    "issues": issues
+                }, f, indent=2)
+            print(f"📁 Validation report saved to {report_file}")
+        
+        return 0 if valid_sequences > 0 else 1
+        
+    except Exception as e:
+        print(f"❌ Validation failed: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def interactive_command(args) -> int:
+    """Start interactive mode."""
+    print("🎯 Starting interactive protein design session...")
+    print("Type 'help' for commands, 'quit' to exit\n")
+    
+    # Initialize components
+    try:
+        config = ProteinDiffuserConfig()
+        diffuser = ProteinDiffuser(config)
+        ranker = AffinityRanker()
+        print("✅ System initialized successfully\n")
+    except Exception as e:
+        print(f"❌ Failed to initialize system: {e}")
+        return 1
+    
+    session_results = []
+    
+    while True:
+        try:
+            command = input("🧬 protein-diffusion> ").strip()
+            
+            if not command:
+                continue
+                
+            if command.lower() in ['quit', 'exit', 'q']:
+                print("👋 Goodbye!")
+                break
+                
+            elif command.lower() in ['help', 'h']:
+                print("""
+📖 Available commands:
+  generate [motif] [samples] - Generate protein scaffolds
+  rank - Rank current session results
+  show - Show current session results
+  clear - Clear session results
+  status - Show system status
+  help - Show this help
+  quit - Exit interactive mode
+                """)
+                
+            elif command.lower().startswith('generate'):
+                parts = command.split()
+                motif = parts[1] if len(parts) > 1 else "HELIX"
+                samples = int(parts[2]) if len(parts) > 2 else 5
+                
+                print(f"🔬 Generating {samples} sequences with motif '{motif}'...")
+                results = diffuser.generate(
+                    motif=motif,
+                    num_samples=samples,
+                    max_length=128,
+                    progress=False
+                )
+                session_results.extend(results)
+                print(f"✅ Generated {len(results)} sequences (total: {len(session_results)})")
+                
+            elif command.lower() == 'rank':
+                if not session_results:
+                    print("⚠️  No sequences to rank. Generate some first.")
+                    continue
+                    
+                print(f"🏆 Ranking {len(session_results)} sequences...")
+                sequences = [r.get('sequence', '') for r in session_results if r.get('sequence')]
+                ranked = ranker.get_top_candidates(sequences, top_k=10)
+                
+                print("\n🥇 Top sequences:")
+                for i, (seq, score) in enumerate(ranked[:5]):
+                    print(f"  {i+1}. Score: {score:.4f} | {seq[:50]}...")
+                    
+            elif command.lower() == 'show':
+                print(f"\n📊 Session summary: {len(session_results)} sequences")
+                if session_results:
+                    avg_length = sum(len(r.get('sequence', '')) for r in session_results) / len(session_results)
+                    avg_conf = sum(r.get('confidence', 0) for r in session_results) / len(session_results)
+                    print(f"Average length: {avg_length:.1f}")
+                    print(f"Average confidence: {avg_conf:.3f}")
+                    
+            elif command.lower() == 'clear':
+                session_results.clear()
+                print("🗑️  Session results cleared")
+                
+            elif command.lower() == 'status':
+                health = diffuser.health_check()
+                print(f"\n🔧 System status: {health['overall_status']}")
+                if health['warnings']:
+                    print(f"⚠️  Warnings: {len(health['warnings'])}")
+                if health['errors']:
+                    print(f"❌ Errors: {len(health['errors'])}")
+                    
+            else:
+                print(f"❓ Unknown command: {command}. Type 'help' for available commands.")
+                
+        except KeyboardInterrupt:
+            print("\n👋 Goodbye!")
+            break
+        except Exception as e:
+            print(f"❌ Error: {e}")
+    
+    return 0
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -371,6 +624,12 @@ Examples:
 
   # Analyze results
   protein-diffusion analyze --input ./results/results.json
+  
+  # Run system benchmarks
+  protein-diffusion benchmark --output ./benchmark
+  
+  # Start interactive mode
+  protein-diffusion interactive
         """
     )
     
@@ -415,6 +674,21 @@ Examples:
     analyze_parser.add_argument('--input', '-i', required=True, help='Input results file (JSON)')
     analyze_parser.add_argument('--output', '-o', help='Output directory for analysis report')
     analyze_parser.set_defaults(func=analyze_command)
+    
+    # Benchmark command
+    benchmark_parser = subparsers.add_parser('benchmark', help='Run system benchmarks')
+    benchmark_parser.add_argument('--output', '-o', help='Output directory for benchmark results')
+    benchmark_parser.set_defaults(func=benchmark_command)
+    
+    # Validate command
+    validate_parser = subparsers.add_parser('validate', help='Validate input sequences')
+    validate_parser.add_argument('--input', '-i', required=True, help='Input sequences file')
+    validate_parser.add_argument('--output', '-o', help='Output directory for validation report')
+    validate_parser.set_defaults(func=validate_command)
+    
+    # Interactive command
+    interactive_parser = subparsers.add_parser('interactive', help='Start interactive mode')
+    interactive_parser.set_defaults(func=interactive_command)
     
     args = parser.parse_args()
     
