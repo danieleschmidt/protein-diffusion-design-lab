@@ -2,7 +2,15 @@
 Advanced Performance Optimization Framework for Protein Diffusion Design Lab.
 
 This module provides comprehensive performance optimization including batch processing,
-parallel execution, GPU acceleration, and intelligent resource management.
+parallel execution, GPU acceleration, intelligent resource management, distributed
+processing integration, and adaptive performance tuning.
+
+Generation 3 Enhancements:
+- Advanced memory management with tensor pools
+- CUDA optimization with mixed precision
+- Intelligent batch size adaptation  
+- Performance profiling and adaptive tuning
+- Integration with distributed processing
 """
 
 import logging
