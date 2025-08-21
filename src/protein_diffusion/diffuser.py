@@ -13,6 +13,16 @@ except ImportError:
     from . import mock_torch as torch
     nn = torch.nn
     TORCH_AVAILABLE = False
+    
+    # For basic functionality testing, use simplified diffuser
+    try:
+        from .simplified_diffuser import (
+            ProteinDiffuser as SimplifiedProteinDiffuser,
+            ProteinDiffuserConfig as SimplifiedProteinDiffuserConfig
+        )
+        SIMPLIFIED_AVAILABLE = True
+    except ImportError:
+        SIMPLIFIED_AVAILABLE = False
 from typing import List, Optional, Dict, Union, Tuple, Any
 from pathlib import Path
 try:
@@ -160,12 +170,22 @@ class ProteinDiffuser:
     
     def __init__(
         self,
-        config: ProteinDiffuserConfig,
+        config: ProteinDiffuserConfig = None,
         model: Optional[DiffusionTransformer] = None,
         tokenizer: Optional[SELFIESTokenizer] = None,
     ):
-        self.config = config
-        self.device = torch.device(config.device)
+        # For basic functionality testing, use simplified diffuser when available
+        if not TORCH_AVAILABLE and SIMPLIFIED_AVAILABLE and config is None:
+            logger.warning("PyTorch not available, using simplified diffuser for basic functionality")
+            simplified_config = SimplifiedProteinDiffuserConfig()
+            self._simplified_diffuser = SimplifiedProteinDiffuser(simplified_config)
+            self._use_simplified = True
+            self.config = config or ProteinDiffuserConfig()
+            return
+        
+        self._use_simplified = False
+        self.config = config or ProteinDiffuserConfig()
+        self.device = torch.device(self.config.device)
         
         # Initialize tokenizer
         if tokenizer is not None:
@@ -308,6 +328,20 @@ class ProteinDiffuser:
         Returns:
             List of generated protein scaffolds with metadata
         """
+        # Use simplified diffuser if available for basic functionality
+        if hasattr(self, '_use_simplified') and self._use_simplified:
+            logger.info("Using simplified diffuser for generation")
+            sequences = self._simplified_diffuser.diffuser.generate(
+                num_samples=num_samples or 10,
+                max_length=max_length or 100,
+                temperature=temperature or 0.8,
+                motif=motif,
+                progress=progress
+            )
+            # Convert to expected format (sequences are SimplifiedProteinSequence objects)
+            return [{'sequence': seq.sequence, 'confidence': seq.confidence, 'metadata': seq.metadata} 
+                   for seq in sequences]
+        
         try:
             # Enhanced input validation and sanitization
             if VALIDATION_AVAILABLE:
