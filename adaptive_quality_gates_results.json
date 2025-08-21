@@ -1,0 +1,149 @@
+{
+  "timestamp": 1755740923.823254,
+  "execution_time_seconds": 0.13723063468933105,
+  "system_info": {
+    "platform": "Linux-6.1.102-x86_64-with-glibc2.39",
+    "python_version": "3.12.3",
+    "cpu_count": 2,
+    "working_directory": "/root/repo",
+    "python_executable": "/usr/bin/python3",
+    "memory_info": "unavailable (psutil not installed)"
+  },
+  "overall_success": true,
+  "total_gates": 9,
+  "status_counts": {
+    "pending": 0,
+    "running": 0,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "warning": 0
+  },
+  "required_failed": 0,
+  "optional_failed": 0,
+  "gate_results": {
+    "system_health": {
+      "status": "passed",
+      "execution_time": 4.100799560546875e-05,
+      "metrics": {
+        "python_version": "3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]",
+        "platform": "Linux-6.1.102-x86_64-with-glibc2.39",
+        "cpu_count": 2,
+        "missing_files": 0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "import_validation": {
+      "status": "passed",
+      "execution_time": 0.09932732582092285,
+      "metrics": {
+        "successful_imports": 5,
+        "failed_imports": 1,
+        "total_tests": 6,
+        "success_rate": 0.8333333333333334
+      },
+      "warnings": [
+        "pathlib.Path: No module named 'pathlib.Path'; 'pathlib' is not a package"
+      ],
+      "has_error": false,
+      "error_output": ""
+    },
+    "basic_functionality": {
+      "status": "passed",
+      "execution_time": 0.00029921531677246094,
+      "metrics": {
+        "generation_time_seconds": 0.0002238750457763672,
+        "num_results": 1,
+        "config_created": true,
+        "diffuser_initialized": true,
+        "method": "simplified_diffuser"
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "code_structure": {
+      "status": "passed",
+      "execution_time": 0.013907670974731445,
+      "metrics": {
+        "structure_score": 5,
+        "max_score": 5,
+        "files_checked": 3,
+        "syntax_errors": 0,
+        "structure_percentage": 100.0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "security_basic": {
+      "status": "passed",
+      "execution_time": 0.0028848648071289062,
+      "metrics": {
+        "security_score": 5,
+        "max_score": 5,
+        "files_checked": 10,
+        "security_issues": 0,
+        "security_percentage": 100.0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "performance_baseline": {
+      "status": "passed",
+      "execution_time": 0.0003833770751953125,
+      "metrics": {
+        "initialization_time_seconds": 6.556510925292969e-05,
+        "generation_time_seconds": 0.00020384788513183594,
+        "memory_usage": "unavailable",
+        "sequences_generated": 2,
+        "time_per_sequence": 0.00010192394256591797
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "research_validation": {
+      "status": "passed",
+      "execution_time": 3.647804260253906e-05,
+      "metrics": {
+        "research_score": 4,
+        "max_score": 4,
+        "advanced_modules": 3,
+        "research_percentage": 100.0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "deployment_readiness": {
+      "status": "passed",
+      "execution_time": 2.5272369384765625e-05,
+      "metrics": {
+        "deployment_score": 6,
+        "max_score": 6,
+        "deployment_percentage": 100.0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    },
+    "stress_test": {
+      "status": "passed",
+      "execution_time": 0.018344402313232422,
+      "metrics": {
+        "stress_test_time_seconds": 0.018334388732910156,
+        "successful_runs": 3,
+        "total_runs": 3,
+        "success_rate": 1.0
+      },
+      "warnings": [],
+      "has_error": false,
+      "error_output": ""
+    }
+  },
+  "recommendations": []
+}

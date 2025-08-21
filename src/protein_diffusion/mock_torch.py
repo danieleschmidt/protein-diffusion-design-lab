@@ -1,9 +1,20 @@
 """
-Minimal mock implementations for torch when not available.
+Enhanced mock implementations for torch when not available.
+Now uses the enhanced mock framework for better compatibility.
 """
 
 from typing import Any, Union, List, Tuple
 import random
+
+# Import enhanced mock framework
+try:
+    from .enhanced_mock_framework import (
+        EnhancedMockTensor, EnhancedMockEmbedding, EnhancedMockLinear,
+        EnhancedMockModule, EnhancedMockOptimizer, enhanced_mock_torch
+    )
+    ENHANCED_FRAMEWORK_AVAILABLE = True
+except ImportError:
+    ENHANCED_FRAMEWORK_AVAILABLE = False
 
 class MockTensor:
     def __init__(self, data, dtype=None):
@@ -380,3 +391,30 @@ def save(obj, f):
 # Alias for type hints
 Tensor = MockTensor
 dtype = MockDtype
+
+# Enhanced mock compatibility layer
+if ENHANCED_FRAMEWORK_AVAILABLE:
+    # Use enhanced mocks for better compatibility
+    def get_enhanced_tensor(*args, **kwargs):
+        return EnhancedMockTensor(*args, **kwargs)
+    
+    def get_enhanced_embedding(*args, **kwargs):
+        return EnhancedMockEmbedding(*args, **kwargs)
+    
+    def get_enhanced_linear(*args, **kwargs):
+        return EnhancedMockLinear(*args, **kwargs)
+    
+    # Override classes to use enhanced versions
+    class EnhancedMockEmbeddingWrapper(MockEmbedding):
+        def __init__(self, num_embeddings, embedding_dim):
+            super().__init__(num_embeddings, embedding_dim)
+            self._enhanced = EnhancedMockEmbedding(num_embeddings, embedding_dim)
+            # Add weight attribute for compatibility
+            self.weight = self._enhanced.weight
+        
+        def __call__(self, input):
+            return self._enhanced(input)
+    
+    # Use enhanced embedding for better compatibility
+    MockEmbedding = EnhancedMockEmbeddingWrapper
+    nn.Embedding = EnhancedMockEmbeddingWrapper
