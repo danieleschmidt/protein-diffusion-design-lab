@@ -1,0 +1,478 @@
+# TPU v6e Production Configuration for Protein Diffusion Models
+# Optimized for Google Cloud TPU v6e with global deployment capabilities
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tpu-protein-diffusion-config
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    version: "v4.0"
+    tier: production
+data:
+  # TPU Configuration
+  tpu_backend: "jax"
+  tpu_version: "v6e"
+  tpu_cores: "8"
+  tpu_mesh_shape: "2,4"
+  enable_mixed_precision: "true"
+  enable_model_parallelism: "true"
+  enable_compilation_cache: "true"
+  
+  # Model Configuration
+  default_hidden_size: "768"
+  default_num_layers: "12"
+  default_attention_heads: "12"
+  max_sequence_length: "512"
+  batch_size_per_core: "32"
+  
+  # Performance Settings
+  enable_advanced_caching: "true"
+  cache_l1_size_mb: "1024"
+  cache_l2_size_mb: "10240"
+  cache_compression: "zstd"
+  
+  # Global Settings
+  primary_region: "us-east-1"
+  supported_regions: "us-east-1,eu-central-1,asia-pacific-1"
+  supported_languages: "en,es,fr,de,ja,zh,pt"
+  enable_data_localization: "true"
+  
+  # Compliance
+  gdpr_enabled: "true"
+  ccpa_enabled: "true"
+  data_retention_days: "2555"
+  audit_logging: "true"
+  
+  # Security
+  encryption_at_rest: "true"
+  encryption_in_transit: "true"
+  rate_limiting_enabled: "true"
+  max_requests_per_minute: "1000"
+  
+  # Monitoring
+  enable_metrics: "true"
+  enable_tracing: "true"
+  log_level: "INFO"
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: protein-diffusion-api
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    component: api
+    version: "v4.0"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: protein-diffusion
+      component: api
+  template:
+    metadata:
+      labels:
+        app: protein-diffusion
+        component: api
+        version: "v4.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: protein-diffusion-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+      - name: protein-diffusion-api
+        image: gcr.io/protein-diffusion/tpu-optimized:v4.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: TPU_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: tpu_backend
+        - name: TPU_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: tpu_version
+        - name: TPU_CORES
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: tpu_cores
+        - name: ENABLE_MIXED_PRECISION
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: enable_mixed_precision
+        - name: PRIMARY_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: primary_region
+        - name: SUPPORTED_LANGUAGES
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: supported_languages
+        - name: GDPR_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: tpu-protein-diffusion-config
+              key: gdpr_enabled
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: protein-diffusion-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: protein-diffusion-secrets
+              key: redis-url
+        - name: API_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: protein-diffusion-secrets
+              key: api-secret-key
+        resources:
+          requests:
+            cpu: "2"
+            memory: "8Gi"
+            google.com/tpu: "8"
+          limits:
+            cpu: "4"
+            memory: "16Gi"
+            google.com/tpu: "8"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        volumeMounts:
+        - name: cache-volume
+          mountPath: /app/cache
+        - name: model-weights
+          mountPath: /app/models
+          readOnly: true
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: protein-diffusion-cache-pvc
+      - name: model-weights
+        persistentVolumeClaim:
+          claimName: protein-diffusion-models-pvc
+      - name: config-volume
+        configMap:
+          name: tpu-protein-diffusion-config
+      nodeSelector:
+        cloud.google.com/gke-tpu-topology: "2x4"
+        cloud.google.com/gke-tpu-accelerator: "tpu-v6e"
+      tolerations:
+      - key: "google.com/tpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: protein-diffusion-api-service
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    component: api
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "protein-diffusion-backend-config"}'
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8090
+    targetPort: 8090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: protein-diffusion
+    component: api
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: protein-diffusion-ingress
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "protein-diffusion-ip"
+    networking.gke.io/managed-certificates: "protein-diffusion-ssl-cert"
+    kubernetes.io/ingress.allow-http: "false"
+    cloud.google.com/armor-config: '{"protein-diffusion-security-policy": "protein-diffusion-waf-policy"}'
+spec:
+  rules:
+  - host: api.protein-diffusion.ai
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: protein-diffusion-api-service
+            port:
+              number: 80
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: protein-diffusion-cache-pvc
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    component: cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: protein-diffusion-models-pvc
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    component: models
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 500Gi
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: protein-diffusion-hpa
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: protein-diffusion-api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: protein_generations_per_second
+      target:
+        type: AverageValue
+        averageValue: "10"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: protein-diffusion-sa
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+  annotations:
+    iam.gke.io/gcp-service-account: protein-diffusion@PROJECT_ID.iam.gserviceaccount.com
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: protein-diffusion-role
+  namespace: protein-diffusion-prod
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: protein-diffusion-rolebinding
+  namespace: protein-diffusion-prod
+subjects:
+- kind: ServiceAccount
+  name: protein-diffusion-sa
+  namespace: protein-diffusion-prod
+roleRef:
+  kind: Role
+  name: protein-diffusion-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: protein-diffusion-secrets
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+type: Opaque
+data:
+  # These should be base64 encoded values
+  # Replace with actual values during deployment
+  database-url: UE9TVEdSRVNRTF9VUkw=  # POSTGRESQL_URL
+  redis-url: UkVESVNfVVJM  # REDIS_URL
+  api-secret-key: QVBJX1NFQ1JFVF9LRVk=  # API_SECRET_KEY
+
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: protein-diffusion-ssl-cert
+  namespace: protein-diffusion-prod
+spec:
+  domains:
+    - api.protein-diffusion.ai
+    - protein-diffusion.ai
+    - www.protein-diffusion.ai
+
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: protein-diffusion-backend-config
+  namespace: protein-diffusion-prod
+spec:
+  timeoutSec: 300
+  connectionDraining:
+    drainingTimeoutSec: 60
+  healthCheck:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /health
+    port: 8080
+  cdn:
+    enabled: true
+    cachePolicy:
+      includeHost: true
+      includeProtocol: true
+      includeQueryString: false
+  iap:
+    enabled: false
+  securityPolicy:
+    name: "protein-diffusion-waf-policy"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: protein-diffusion-monitoring
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+    component: monitoring
+spec:
+  ports:
+  - port: 8090
+    targetPort: 8090
+    name: metrics
+  selector:
+    app: protein-diffusion
+    component: api
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: protein-diffusion-metrics
+  namespace: protein-diffusion-prod
+  labels:
+    app: protein-diffusion
+spec:
+  selector:
+    matchLabels:
+      app: protein-diffusion
+      component: monitoring
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
