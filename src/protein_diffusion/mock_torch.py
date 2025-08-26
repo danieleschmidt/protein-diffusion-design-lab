@@ -319,10 +319,45 @@ class MockEmbedding(MockModule):
         
         return MockTensor([[[0.5] * self.embedding_dim for _ in range(seq_len)] for _ in range(batch_size)])
 
+class MockModuleList(MockModule):
+    """Mock implementation of nn.ModuleList"""
+    def __init__(self, modules=None):
+        super().__init__()
+        if modules is None:
+            modules = []
+        self._modules = list(modules)
+        # Add modules as attributes for proper mock behavior
+        for i, module in enumerate(self._modules):
+            setattr(self, str(i), module)
+    
+    def __iter__(self):
+        return iter(self._modules)
+    
+    def __getitem__(self, index):
+        return self._modules[index]
+    
+    def __setitem__(self, index, module):
+        self._modules[index] = module
+        setattr(self, str(index), module)
+    
+    def __len__(self):
+        return len(self._modules)
+    
+    def append(self, module):
+        self._modules.append(module)
+        setattr(self, str(len(self._modules) - 1), module)
+        return self
+    
+    def extend(self, modules):
+        for module in modules:
+            self.append(module)
+        return self
+
 class MockNN:
     Module = MockModule
     Linear = MockLinear
     Embedding = MockEmbedding
+    ModuleList = MockModuleList
     
     class LayerNorm(MockModule):
         def __init__(self, *args, **kwargs):
@@ -336,16 +371,37 @@ class MockNN:
         def __call__(self, input):
             return input
     
-    class ModuleList(MockModule):
-        def __init__(self, modules=None):
-            super().__init__()
-            self.modules = modules or []
-        def __iter__(self):
-            return iter(self.modules)
-    
     class Identity(MockModule):
         def __call__(self, input):
             return input
+    
+    class ReLU(MockModule):
+        def __call__(self, input):
+            return input
+    
+    class GELU(MockModule):
+        def __call__(self, input):
+            return input
+    
+    class MultiheadAttention(MockModule):
+        def __init__(self, embed_dim, num_heads, *args, **kwargs):
+            super().__init__()
+            self.embed_dim = embed_dim
+            self.num_heads = num_heads
+        
+        def __call__(self, query, key=None, value=None, *args, **kwargs):
+            # Return (output, attention_weights)
+            batch_size = getattr(query, 'shape', [1, 10, 512])[0]
+            seq_len = getattr(query, 'shape', [1, 10, 512])[1]
+            return MockTensor([[[0.5] * self.embed_dim for _ in range(seq_len)] for _ in range(batch_size)]), MockTensor([[[0.1] * seq_len for _ in range(seq_len)] for _ in range(batch_size)])
+    
+    class TransformerEncoderLayer(MockModule):
+        def __init__(self, d_model, nhead, *args, **kwargs):
+            super().__init__()
+            self.self_attn = MockNN.MultiheadAttention(d_model, nhead)
+        
+        def __call__(self, src, *args, **kwargs):
+            return src
 
 nn = MockNN()
 
