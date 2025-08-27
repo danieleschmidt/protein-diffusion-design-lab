@@ -2,8 +2,18 @@
 """
 Progressive Quality Gates for Protein Diffusion Design Lab
 
-Next-generation quality validation system that adapts to environment
-and provides progressive enhancement capabilities.
+Next-generation autonomous quality validation system with advanced error recovery,
+intelligent adaptation, and comprehensive reliability patterns.
+
+Features:
+- Autonomous environment detection and adaptation
+- Multi-stage progressive quality validation
+- Advanced error recovery and fallback mechanisms
+- Real-time performance monitoring and optimization
+- Intelligent gate selection and prioritization
+- Comprehensive security and compliance validation
+- Research-grade quality assurance
+- Production-ready deployment validation
 """
 
 import sys
@@ -23,6 +33,16 @@ import platform
 import psutil
 import gc
 import warnings
+import hashlib
+import contextlib
+import signal
+import resource
+from functools import wraps, lru_cache
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from collections import defaultdict, deque
+from pathlib import Path
+import tempfile
 
 # Suppress warnings during quality gate execution
 warnings.filterwarnings('ignore')
@@ -51,18 +71,22 @@ class GateType(Enum):
 
 
 class GateStatus(Enum):
-    """Quality gate status."""
+    """Quality gate status with enhanced states."""
     PENDING = "pending"
     RUNNING = "running"
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
     WARNING = "warning"
+    TIMEOUT = "timeout"
+    ERROR = "error"
+    RECOVERED = "recovered"
+    DEGRADED = "degraded"
 
 
 @dataclass
 class QualityGateResult:
-    """Results from a quality gate execution."""
+    """Enhanced results from a quality gate execution."""
     name: str
     status: GateStatus
     execution_time: float = 0.0
@@ -71,6 +95,20 @@ class QualityGateResult:
     metrics: Dict[str, Any] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
     recommendations: List[str] = field(default_factory=list)
+    
+    # Enhanced tracking
+    start_time: float = 0.0
+    end_time: float = 0.0
+    attempts: int = 1
+    recovery_actions: List[str] = field(default_factory=list)
+    resource_usage: Dict[str, float] = field(default_factory=dict)
+    dependencies_status: Dict[str, bool] = field(default_factory=dict)
+    confidence_score: float = 1.0
+    criticality_level: str = "medium"
+    
+    # Adaptive learning
+    historical_performance: Dict[str, float] = field(default_factory=dict)
+    optimization_suggestions: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -106,10 +144,71 @@ class ProgressiveQualityGateConfig:
     benchmark_performance: bool = False
     validate_research_quality: bool = False
     check_reproducibility: bool = False
+    
+    # Enhanced reliability
+    max_retry_attempts: int = 3
+    circuit_breaker_threshold: float = 0.5
+    health_check_interval: int = 30
+    adaptive_timeout: bool = True
+    
+    # Advanced error handling
+    graceful_degradation: bool = True
+    auto_recovery: bool = True
+    rollback_on_failure: bool = False
+    
+    # Performance optimization
+    cache_results: bool = True
+    parallel_optimization: bool = True
+    resource_monitoring: bool = True
+    
+    # Security enhancements
+    security_hardening: bool = True
+    compliance_validation: bool = True
+    audit_logging: bool = True
+
+
+class CircuitBreaker:
+    """Circuit breaker pattern for fault tolerance."""
+    
+    def __init__(self, threshold: float = 0.5, timeout: int = 60):
+        self.threshold = threshold
+        self.timeout = timeout
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time = 0
+        self.state = 'closed'  # closed, open, half-open
+    
+    def record_success(self):
+        """Record successful execution."""
+        self.success_count += 1
+        self.failure_count = max(0, self.failure_count - 1)
+        if self.state == 'half-open':
+            self.state = 'closed'
+    
+    def record_failure(self):
+        """Record failed execution."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        total_calls = self.success_count + self.failure_count
+        if total_calls > 0 and (self.failure_count / total_calls) >= self.threshold:
+            self.state = 'open'
+    
+    def can_execute(self) -> bool:
+        """Check if execution is allowed."""
+        if self.state == 'closed':
+            return True
+        elif self.state == 'open':
+            if time.time() - self.last_failure_time >= self.timeout:
+                self.state = 'half-open'
+                return True
+            return False
+        elif self.state == 'half-open':
+            return True
+        return False
 
 
 class ProgressiveQualityGate:
-    """A progressive quality gate that adapts to environment."""
+    """A progressive quality gate with advanced error recovery and adaptation."""
     
     def __init__(
         self,
@@ -122,7 +221,11 @@ class ProgressiveQualityGate:
         command: str = None,
         function: callable = None,
         fallback_function: callable = None,
-        adaptive: bool = True
+        adaptive: bool = True,
+        criticality: str = "medium",
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        circuit_breaker: bool = True
     ):
         self.name = name
         self.description = description
@@ -134,9 +237,22 @@ class ProgressiveQualityGate:
         self.function = function
         self.fallback_function = fallback_function
         self.adaptive = adaptive
+        self.criticality = criticality
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        
+        # Advanced fault tolerance
+        self.circuit_breaker = CircuitBreaker() if circuit_breaker else None
+        self.execution_history = deque(maxlen=100)
+        self.resource_limits = {'memory_mb': 1000, 'cpu_percent': 80}
+        self.recovery_strategies = []
         
         self.status = GateStatus.PENDING
-        self.result = QualityGateResult(name=name, status=GateStatus.PENDING)
+        self.result = QualityGateResult(
+            name=name, 
+            status=GateStatus.PENDING, 
+            criticality_level=criticality
+        )
     
     def check_dependencies(self) -> Tuple[bool, List[str]]:
         """Check if all dependencies are available."""
